@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<svg xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:svg="http://www.w3.org/2000/svg" id="svg2" viewBox="0 0 768 768" version="1.1">
+  <defs id="defs4">
+    <clipPath id="clipPathFlag" clipPathUnits="userSpaceOnUse">
+      <rect id="rect3918" fill-opacity=".67" ry="57" height="511" width="511" y=".5" x=".5"/>
+    </clipPath>
+    <linearGradient id="linearGradient3852-0">
+      <stop id="stop3854-6" stop-color="#dbe3db" offset="0"/>
+      <stop id="stop3856-1" stop-color="#dbe3db" stop-opacity="0" offset="1"/>
+    </linearGradient>
+    <linearGradient id="linearGradient5122" x1="342.19" xlink:href="#linearGradient3852-0" gradientUnits="userSpaceOnUse" y1="705.76" gradientTransform="matrix(1.1571 0 0 1.3167 -91.204 -253.99)" x2="358.08" y2="523.41"/>
+    <linearGradient id="linearGradient5125" x1="405.26" xlink:href="#linearGradient3852-0" gradientUnits="userSpaceOnUse" y1="118.06" gradientTransform="matrix(.95303 0 0 .86647 11.575 -4.5016)" x2="405.75" y2="360.92"/>
+    <filter id="filter5740">
+      <feGaussianBlur id="feGaussianBlur5742" stdDeviation="5.12"/>
+    </filter>
+    <clipPath id="clipPath5796" clipPathUnits="userSpaceOnUse">
+      <rect id="rect5798" ry="57" height="512" width="512" stroke="#00fa00" y="0" x="0" stroke-width="20" fill="none"/>
+    </clipPath>
+    <filter id="filter5912">
+      <feGaussianBlur id="feGaussianBlur5914" stdDeviation="17.92"/>
+    </filter>
+  </defs>
+  <g id="template-button">&gt;
+  <g id="00" transform="translate(90,90)"><rect id="shadow" ry="57" height="512" filter="url(#filter5912)" width="512" stroke="#a8a8a8" y="56" x="38" stroke-width="5"/></g>
+  <g id="01" transform="translate(128,128)" clip-path="url(#clipPathFlag)"><rect id="mask" ry="57" height="512" width="512" y="0" x="0" fill="#00f"/><g id="flag" transform="matrix(.72249 0 0 .72249 -69 .0000024116)" clip-path="url(#clipPath4897)"><rect id="rect171" fill-rule="evenodd" height="708.66" width="1063" y="0" x="0" stroke-width="1pt" fill="#fff"/><rect id="rect403" fill-rule="evenodd" height="472.44" width="1063" y="236.22" x="0" stroke-width="1pt" fill="#01017e"/><rect id="rect135" fill-rule="evenodd" height="236.22" width="1063" y="472.44" x="0" stroke-width="1pt" fill="#fe0101"/><path id="path150" stroke-width="1pt" fill-rule="evenodd" fill="#fff" d="m185.1 160.83v198.72c13.61 77.581 49.679 156.52 171.49 196.67 121.14-40.151 159.92-115.69 174.22-198.04v-197.35h-345.71z"/><path id="path140" stroke-width="1pt" fill-rule="evenodd" fill="#fe0101" d="m198.72 176.48v173.54c12.24 63.29 36.06 149.72 157.88 189.87 121.13-40.15 149.04-126.58 159.92-189.87v-173.54h-317.81z"/><path id="path153" stroke-width="1pt" fill-rule="evenodd" fill="#fff" d="m375.65 281.29v27.902h55.804c7.482 0 14.518-3.63 21.777-5.445v52.401c-7.486-1.588-14.805-4.763-22.458-4.763h-54.442v63.97l-37.43-1.361v-62.609h-53.081c-7.978 0-15.425 4.083-23.138 6.124v-55.803c7.259 2.268 14.172 6.805 21.777 6.805h54.442v-27.902h-40.151c-7.036 0-13.157 4.991-19.736 7.486v-53.081c7.486 3.176 14.326 9.527 22.458 9.527h38.11v-23.819c0-11.125-6.352-21.323-9.528-31.985h53.762c-2.722 10.889-8.166 21.442-8.166 32.666v23.138h36.068c9.411 0 18.148-4.99 27.222-7.485v52.401c-8.167-2.722-15.892-8.167-24.5-8.167h-38.79z"/><path id="path152" stroke-width="1pt" fill-rule="evenodd" fill="#01017e" d="m306.92 422.84c-31.986-15.993-62.54-7.062-77.156 18.544 22.713 43.384 65.927 78.431 126.84 98.507 60.568-20.076 104.63-55.123 128.79-96.465-18.82-35.903-54.613-31.135-77.751-19.905-16.333-40.152-83.025-38.11-100.72-0.681z"/></g></g>
+  <g id="02" transform="translate(0,38)"><path id="path3862-8" style="color:#000000" fill="url(#linearGradient5125)" d="m214.21 111.21c-45.245 0.18809-68.716 7.7308-64.094 83.553l2.8252 46.345c47.474 5.5124 56.664 18.445 104.36 21.914 68.073 4.9513 67.937 5.4209 130.56-14.384 62.628-19.805 5.8248-65.247 207.32-57.82 4.6033 0.16968 17.314-3.0527 27.462-12.15 5.5817-46.524-2.7842-69.143-66.934-68.876z"/><path id="path3079-9" style="color:#000000" fill="url(#linearGradient5122)" d="m531.03 495.17c-31.605 19.022-27.601 31.26-37.913 32.573-94.704 12.053-145.98-0.72701-165.8-12.061-59.588-34.078-68.468-13.014-100.22-16.574-20.115-2.2551-59.245 12.984-73.388 44.344 3.4722 27.608 18.111 32.098 44.281 31.986l356.06-1.5268c69.692-0.29885 56.335-8.4926 65.543-56.039-14.772-21.671-13.157 9.109-44.224-30.717z"/><rect id="rect5734" transform="translate(128,90)" clip-path="url(#clipPath5796)" ry="57" height="512" filter="url(#filter5740)" width="512" stroke="#000" y="0" x="0" stroke-width="20" fill="none"/></g>
+ </g>
+  <metadata>
+    <rdf:RDF>
+      <cc:Work>
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+        <cc:license rdf:resource="http://creativecommons.org/licenses/publicdomain/"/>
+        <dc:publisher>
+          <cc:Agent rdf:about="http://openclipart.org/">
+            <dc:title>Openclipart</dc:title>
+          </cc:Agent>
+        </dc:publisher>
+        <dc:title>sk</dc:title>
+        <dc:date>2011-08-21T12:01:33</dc:date>
+        <dc:description>country flag buttons (with ISO-3166-1 naming convention)</dc:description>
+        <dc:source>http://openclipart.org/detail/157093/sk-by-koppi</dc:source>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>koppi</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:subject>
+          <rdf:Bag>
+            <rdf:li>ISO3166-1</rdf:li>
+            <rdf:li>button</rdf:li>
+            <rdf:li>clip art</rdf:li>
+            <rdf:li>clipart</rdf:li>
+            <rdf:li>country</rdf:li>
+            <rdf:li>flag</rdf:li>
+            <rdf:li>flags</rdf:li>
+            <rdf:li>squared</rdf:li>
+          </rdf:Bag>
+        </dc:subject>
+      </cc:Work>
+      <cc:License rdf:about="http://creativecommons.org/licenses/publicdomain/">
+        <cc:permits rdf:resource="http://creativecommons.org/ns#Reproduction"/>
+        <cc:permits rdf:resource="http://creativecommons.org/ns#Distribution"/>
+        <cc:permits rdf:resource="http://creativecommons.org/ns#DerivativeWorks"/>
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+</svg>

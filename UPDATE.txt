@@ -1,0 +1,9 @@
+*** elibsrv UPDATE NOTE ***
+
+If you are updating elibsrv from a version earlier than 2014-10-26, then please execute the following commands on your PostgreSQL database used by elibsrv:
+
+BEGIN;
+ALTER TABLE books ADD COLUMN modtime TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW();
+ALTER TABLE books ALTER COLUMN modtime DROP DEFAULT;
+CREATE INDEX books_modtime_idx ON books(modtime);
+COMMIT;
