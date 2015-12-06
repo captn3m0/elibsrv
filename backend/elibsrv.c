@@ -133,14 +133,12 @@ int main(int argc, char **argv) {
   #define SQLBUFLEN 1024 * 1024
   #define FILENAMELEN 1024
   int verbosemode = 0;
-  char *title;
-  char *sqltitle;
-  char *desc;
-  char *sqldesc;
-  char *author;
-  char *sqlauthor;
-  char *lang;
-  char *sqllang;
+  char *title, *sqltitle;
+  char *desc, *sqldesc;
+  char *author, *sqlauthor;
+  char *publisher, *sqlpublisher;
+  char *pubdate, *sqlpubdate;
+  char *lang, *sqllang;
   char *sqlbuf;
   char **tags;
   struct epub *epubfile;
@@ -239,6 +237,8 @@ int main(int argc, char **argv) {
     lang = get_epub_single_data(epubfile, EPUB_LANG, "UND");
     desc = get_epub_single_data(epubfile, EPUB_DESCRIPTION, NULL);
     tags = get_epub_data(epubfile, EPUB_SUBJECT, 64);
+    publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL);
+    pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL);
     epub_close(epubfile);
 
     if (verbosemode != 0) {
@@ -260,15 +260,19 @@ int main(int argc, char **argv) {
     sqlauthor = libsql_escape_string(author, strlen(author));
     sqllang = libsql_escape_string(lang, strlen(lang));
     sqldesc = libsql_escape_string(desc, strlen(desc));
+    sqlpublisher = libsql_escape_string(publisher, strlen(publisher));
+    sqlpubdate = libsql_escape_string(pubdate, strlen(pubdate));
 
     /* free original strings */
     free(title);
     free(author);
     free(lang);
     free(desc);
+    free(publisher);
+    free(pubdate);
 
     /* Insert the value into SQL */
-    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,file,author,title,language,description,modtime) VALUES (%lu,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())));", crc32, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32);
+    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,file,author,title,language,description,modtime,publisher,pubdate) VALUES (%lu,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())),%s,%s);", crc32, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32, sqlpublisher, sqlpubdate);
     if (libsql_sendreq(sqlbuf) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
       libsql_sendreq("ROLLBACK;");
@@ -280,6 +284,8 @@ int main(int argc, char **argv) {
     free(sqlauthor);
     free(sqllang);
     free(sqldesc);
+    free(sqlpublisher);
+    free(sqlpubdate);
 
     /* insert and free tags */
     for (i = 0; (tags != NULL) && (tags[i] != NULL); i++) {
