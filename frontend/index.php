@@ -226,7 +226,7 @@ function printnaventry($outformat, $title, $urlparams, $iconfile) {
 }
 
 
-function printaqentry($outformat, $title, $crc32, $author, $language, $description, $prettyurls) {
+function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $prettyurls) {
   /* Prepare the epub link in advance, since it can have different forms, depending on "pretty URLs" */
   if ($prettyurls == 1) {
       $aqlink = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . ".epub";
@@ -242,6 +242,8 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
     echo "      <name>" . $author . "</name>\n";
     echo "    </author>\n";
     echo "    <dc:language>" . htmlentities($language, ENT_XML1, "UTF-8") . "</dc:language>\n";
+    echo "    <dcterms:issued>" . htmlentities($pubdate, ENT_XML1, "UTF-8") . "</dcterms:issued>\n";
+    echo "    <dcterms:publisher>" . htmlentities($publisher, ENT_XML1, "UTF-8") . "</dcterms:publisher>\n";
     echo "    <summary type=\"text\">" . htmlentities($description, ENT_XML1, "UTF-8") . "</summary>\n";
     echo "    <link rel=\"http://opds-spec.org/image\"\n";
     echo "        href=\"" . $_SERVER['PHP_SELF'] . "?action=getcover&amp;query={$crc32}\"\n";
@@ -252,6 +254,7 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
     echo "    <link rel=\"http://opds-spec.org/acquisition\"\n";
     echo "        href=\"{$aqlink}\"\n";
     echo "        type=\"application/epub+zip\"/>\n";
+    //<link href="http://www.archive.org/download/bequest_jg_librivox/bequest_jg_librivox.pdf" type="application/pdf" rel="http://opds-spec.org/acquisition"/>
     echo "  </entry>\n";
   } else if ($outformat == "html") {
     $coverurl = $_SERVER['PHP_SELF'] . "?action=getcover&amp;query=" . $crc32;
@@ -294,22 +297,22 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
 
   if (! empty($authorfilter)) {
       $sqlauthorfilter = pg_escape_string($db, $authorfilter);
-      $query = "SELECT crc32, title, author, description, language FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
+      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
     } else if (! empty($langfilter)) {
       $sqllangfilter = pg_escape_string($db, $langfilter);
-      $query = "SELECT crc32, title, author, description, language FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
+      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
     } else if (! empty($tagfilter)) {
       $sqltagfilter = pg_escape_string($db, $tagfilter);
-      $query = "SELECT crc32, title, author, description, language FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language;";
+      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language;";
     } else if ($randflag != 0) {
-      $query = "SELECT crc32, title, author, description, language FROM books ORDER BY random() LIMIT 5;";
+      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books ORDER BY random() LIMIT 5;";
     } else if ($latest > 0) {
-      $query = "SELECT crc32, title, author, description, language FROM books WHERE modtime > NOW() - INTERVAL '{$latest} DAYS' ORDER BY modtime DESC, title, author, language;";
+      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books WHERE modtime > NOW() - INTERVAL '{$latest} DAYS' ORDER BY modtime DESC, title, author, language;";
     } else if (! empty($search)) {
       $sqlsearch = pg_escape_string($db, $search);
-      $query = "SELECT crc32, title, author, description, language FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";
+      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";
     } else {
-      $query = "SELECT crc32, title, author, description, language FROM books ORDER BY title, author, language;";
+      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books ORDER BY title, author, language;";
   }
   $result = pg_query($query);
 
@@ -319,7 +322,9 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $author = strip_tags($myrow['author']);
     $description = strip_tags($myrow['description']);
     $language = strip_tags($myrow['language']);
-    printaqentry($outformat, $title, $crc32, $author, $language, $description, $prettyurls);
+    $publisher = strip_tags($myrow['publisher']);
+    $pubdate = strip_tags($myrow['pubdate']);
+    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $prettyurls);
   }
   pg_free_result($result);
 
