@@ -29,7 +29,36 @@
 #include "crc32.h"
 
 
-static char **get_epub_data(struct epub *epub, int type, int maxepubentries) {
+/* strips the 'type' and 'comment' parts of an epub entry, if any. example:
+ * creator: Jules Vernes (auhtor)   ->   Jules Vernes */
+void striptype(char *dst, char *src) {
+  char *s;
+  s = strstr((char *) src, ": ");
+  if (s != NULL) sprintf(dst, "%s", s + 2);
+  s = strstr(dst, "(");
+  if (s != NULL) *s = 0;
+}
+
+
+/* returns 0 str doesn't start with one of the strings listed in the 'start'
+ * array, non-zero otherwise */
+int stringstartswith(char **list, char *s) {
+  int i;
+  if (list == NULL) return(1);
+  for (i = 0; list[i] != NULL; i++) {
+    char *str = s;
+    for (;;) {
+      if (*list[i] == 0) return(1);
+      if (*list[i] != *str) break;
+      list[i] += 1;
+      str += 1;
+    }
+  }
+  return(0);
+}
+
+
+static char **get_epub_data(struct epub *epub, int type, int maxepubentries, char **filter) {
   unsigned char **meta;
   int metacount, i, rescount = 0;
   char *buff, **result = NULL;
@@ -45,13 +74,14 @@ static char **get_epub_data(struct epub *epub, int type, int maxepubentries) {
   for (i = 0; i < metacount; i++) {
     if (meta[i] != NULL) {
       buff = strdup((char *) meta[i]);
-      /* if we are dealing with a CREATOR, then strip leading type and extract the 'fileAs' part */
-      if (type == EPUB_CREATOR) {
-        char *s;
-        s = strstr((char *) meta[i], ": ");
-        if (s != NULL) sprintf(buff, "%s", s + 2);
-        s = strstr(buff, "(");
-        if (s != NULL) *s = 0;
+      /* if filter set, and no match, ignore */
+      if (stringstartswith(filter, buff) == 0) {
+        free(buff);
+        continue;
+      }
+      /* if we are dealing with a CREATOR or DATE, then strip leading type and extract the 'fileAs' part */
+      if ((type == EPUB_CREATOR) || (type = EPUB_DATE)) {
+        striptype(buff, (char *)meta[i]);
       }
       /* if result is not empty, save it */
       if (buff[0] != 0) {
@@ -72,10 +102,11 @@ static char **get_epub_data(struct epub *epub, int type, int maxepubentries) {
   return(result);
 }
 
-static char *get_epub_single_data(struct epub *epub, int type, char *ifempty) {
+
+static char *get_epub_single_data(struct epub *epub, int type, char *ifempty, char **filter) {
   char **res, *singleres = NULL;
   int i;
-  res = get_epub_data(epub, type, 1);
+  res = get_epub_data(epub, type, 1, filter);
   /* compute the result */
   if ((res != NULL) && (res[0] != NULL)) {
     singleres = strdup(res[0]);
@@ -101,6 +132,7 @@ static char *get_epub_single_data(struct epub *epub, int type, char *ifempty) {
   return(singleres);
 }
 
+
 static void trimlf(char *str) {
   while (*str != 0) {
     if ((*str == '\n') || (*str == '\r')) break;
@@ -108,6 +140,7 @@ static void trimlf(char *str) {
   }
   *str = 0;
 }
+
 
 /* compute CRC32 of a file. returns 0 on success, non-zero otherwise. */
 static int computecrc32(unsigned long *crc32, char *filename) {
@@ -199,6 +232,7 @@ int main(int argc, char **argv) {
   libsql_sendreq("DELETE FROM books;"); /* I could use TRUNCATE here for much better performances, but the problem with TRUNCATE is that it takes an exclusive lock on the table, so the system would become unavailable during indexation time */
   for (;;) {
     int duplicatefound = 0;
+    char *pubfilter[] = { "publication:", "original-publication:", "18", "19", "20", NULL };
 
     /* fetch the filename to process from stdin */
     if (fgets(epubfilename, FILENAMELEN, stdin) == NULL) break;
@@ -232,13 +266,13 @@ int main(int argc, char **argv) {
       continue;
     }
     /* fetch metadata */
-    title = get_epub_single_data(epubfile, EPUB_TITLE, "UNTITLED");
-    author = get_epub_single_data(epubfile, EPUB_CREATOR, "UNKNOWN");
-    lang = get_epub_single_data(epubfile, EPUB_LANG, "UND");
-    desc = get_epub_single_data(epubfile, EPUB_DESCRIPTION, NULL);
-    tags = get_epub_data(epubfile, EPUB_SUBJECT, 64);
-    publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL);
-    pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL);
+    title = get_epub_single_data(epubfile, EPUB_TITLE, "UNTITLED", NULL);
+    author = get_epub_single_data(epubfile, EPUB_CREATOR, "UNKNOWN", NULL);
+    lang = get_epub_single_data(epubfile, EPUB_LANG, "UND", NULL);
+    desc = get_epub_single_data(epubfile, EPUB_DESCRIPTION, NULL, NULL);
+    tags = get_epub_data(epubfile, EPUB_SUBJECT, 64, NULL);
+    publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL, NULL);
+    pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL, pubfilter);
     epub_close(epubfile);
 
     if (verbosemode != 0) {
