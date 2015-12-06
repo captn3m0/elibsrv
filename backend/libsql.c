@@ -1,6 +1,6 @@
 /*
    libsql - a generic interface to the SQL database.
-   Copyright (C) Mateusz Viste 2011-2014
+   Copyright (C) 2014-2016 Mateusz Viste
 
     int libsql_connect(char *sqlserver, int sqlport, char *sqldatabase, char *sqluser, char *sqlpassword)
     void libsql_escape_string(char *fromstr, int fromlen)
@@ -54,7 +54,7 @@ int libsql_connect(char *sqlserver, int sqlport, char *sqldatabase, char *sqluse
   libsql_conn = PQconnectdb(conninfo);
   libsql_inited = 1;
   if (PQstatus(libsql_conn) != CONNECTION_OK) {
-    syslog(LOG_WARNING, PQerrorMessage(libsql_conn));
+    syslog(LOG_WARNING, "%s", PQerrorMessage(libsql_conn));
     libsql_disconnect();
     return(-1);
   }
@@ -64,12 +64,12 @@ int libsql_connect(char *sqlserver, int sqlport, char *sqldatabase, char *sqluse
 
 int libsql_freeresult(void) {
   if ((libsql_inited != 0) && (libsql_rescnt >= 0)) {
-      libsql_rescnt = -1;
-      PQclear(libsql_res);
-      return(0);
-    } else {
-      syslog(LOG_WARNING, "libsql_freeresult(): memory could not be freed [%d;%d]", libsql_inited, libsql_rescnt);
-      return(-1);
+    libsql_rescnt = -1;
+    PQclear(libsql_res);
+    return(0);
+  } else {
+    syslog(LOG_WARNING, "libsql_freeresult(): memory could not be freed [%d;%d]", libsql_inited, libsql_rescnt);
+    return(-1);
   }
 }
 
@@ -94,16 +94,16 @@ int libsql_sendreq(char *sqlcmd) {
     freopen(buf, "w", stdout); */
   /* stdout restored */
   if (PQresultStatus(libsql_res) == PGRES_COMMAND_OK) { /* this is a command that can never return any data */
-      libsql_rescnt = -1;
-      PQclear(libsql_res);
-    } else if (PQresultStatus(libsql_res) != PGRES_TUPLES_OK) {
-      /* snprintf(errmsg, errmsg_maxlen, PQerrorMessage(libsql_conn)); */
-      syslog(LOG_WARNING, PQerrorMessage(libsql_conn));
-      PQclear(libsql_res);
-      libsql_rescnt = -1;
-      return(-1);
-    } else {
-      libsql_rescnt = 0;
+    libsql_rescnt = -1;
+    PQclear(libsql_res);
+  } else if (PQresultStatus(libsql_res) != PGRES_TUPLES_OK) {
+    /* snprintf(errmsg, errmsg_maxlen, PQerrorMessage(libsql_conn)); */
+    syslog(LOG_WARNING, "%s", PQerrorMessage(libsql_conn));
+    PQclear(libsql_res);
+    libsql_rescnt = -1;
+    return(-1);
+  } else {
+    libsql_rescnt = 0;
   }
   return(0);
 }
@@ -111,24 +111,22 @@ int libsql_sendreq(char *sqlcmd) {
 
 int libsql_nextresult(void) {
   if ((libsql_inited != 0) && (libsql_rescnt >= 0)) {
-      if (libsql_rescnt < PQntuples(libsql_res)) {
-          libsql_rescnt += 1;
-          return(0);
-        } else {
-          return(-1);
-      }
-    } else { /* libsql not inited or no request sent that could return anything */
-      return(-2);
+    if (libsql_rescnt < PQntuples(libsql_res)) {
+      libsql_rescnt += 1;
+      return(0);
+    } else {
+      return(-1);
+    }
+  } else { /* libsql not inited or no request sent that could return anything */
+    return(-2);
   }
 }
 
 
 char *libsql_getresult(int nField) {
-  if (libsql_inited != 0) {
-    if (libsql_rescnt > 0) {
-      if ((libsql_rescnt <= PQntuples(libsql_res)) && (nField < PQnfields(libsql_res))) {
-        return(PQgetvalue(libsql_res, libsql_rescnt - 1, nField));
-      }
+  if ((libsql_inited != 0) && (libsql_rescnt > 0)) {
+    if ((libsql_rescnt <= PQntuples(libsql_res)) && (nField < PQnfields(libsql_res))) {
+      return(PQgetvalue(libsql_res, libsql_rescnt - 1, nField));
     }
   }
   return(NULL);
