@@ -1,7 +1,8 @@
 /*
  * elibsrv - a light OPDS indexing server for EPUB ebooks.
+ * http://elibsrv.sourceforge.net
  *
- * Copyright (C) Mateusz Viste 2014
+ * Copyright (C) 2014-2016 Mateusz Viste
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,21 +78,21 @@ static char *get_epub_single_data(struct epub *epub, int type, char *ifempty) {
   res = get_epub_data(epub, type, 1);
   /* compute the result */
   if ((res != NULL) && (res[0] != NULL)) {
-      singleres = strdup(res[0]);
+    singleres = strdup(res[0]);
+  } else {
+    if (ifempty != NULL) {
+      singleres = strdup(ifempty);
     } else {
-      if (ifempty != NULL) {
-          singleres = strdup(ifempty);
-        } else {
-          singleres = strdup(" ");
-      }
+      singleres = strdup(" ");
+    }
   }
   if (res != NULL) {
     /* free all results */
     for (i = 0;; i++) {
       if (res[i] != NULL) {
-          free(res[i]);
-        } else {
-          break;
+        free(res[i]);
+      } else {
+        break;
       }
     }
     free(res);
