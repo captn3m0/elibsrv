@@ -20,7 +20,12 @@
  */
 
 
-$pver = "20141029";
+$pver = "20151209";
+
+
+// include output plugins
+require 'out_html.php';
+require 'out_atom.php';
 
 
 function getconf($array, $key) {
@@ -149,131 +154,67 @@ function getLocalFilename($db, $query) {
 
 
 function printheaders($outformat, $pageid, $pagetitle) {
+  $pageinfo = array();
+  $pageinfo['id'] = $pageid;
+  $pageinfo['title'] = $pagetitle;
+  $pageinfo['self'] = $_SERVER['PHP_SELF'];
   if ($outformat == "atom") {
-    header("content-type: application/xml;charset=utf-8");
-    echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-    echo "\n";
-    echo "<feed xmlns:opds=\"http://opds-spec.org/2010/catalog\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"http://www.w3.org/2005/Atom\" xmlns:thr=\"http://purl.org/syndication/thread/1.0\" xml:lang=\"en\" xmlns:opensearch=\"http://a9.com/-/spec/opensearch/1.1/\" xmlns:app=\"http://www.w3.org/2007/app\" xmlns:dc=\"http://purl.org/dc/terms/\" xmlns:dcterms=\"http://purl.org/dc/terms/\">\n";
-    echo "\n";
-    echo "  <id>" . md5($pageid). "</id>\n";
-    echo "  <title>" . $pagetitle . "</title>\n";
-    echo "  <icon>favicon.png</icon>\n";
-    echo "  <updated>" . date(DATE_ATOM) . "</updated>\n";
-    echo "\n";
+    printheaders_atom($pageinfo);
   } else if ($outformat == "html") {
-    header("content-type: text/html;charset=utf-8");
-    echo "<!DOCTYPE html>\n";
-    echo "<html>\n";
-    echo "<head>\n";
-    echo "  <title>" . htmlentities($pagetitle) . "</title>\n";
-    echo "  <link rel=\"shortcut icon\" href=\"favicon.png\">\n";
-    echo "  <style>\n";
-    echo "    p { padding: 0 1em 0 1em; margin: 0.1em 0 0.1em 0; }\n";
-    echo "    p.menutitle { background-color: #FFE0C0; font-weight: bold; margin-bottom: 0.9em; }\n";
-    echo "    p.acqimg { margin: 0.5em 0 0 0; padding: 0; }\n";
-    echo "    p.acqlink { margin: -2.75em auto 1.2em 2em; }\n";
-    echo "    p.trailer { margin: 1.5em 0 0 0; text-align: right; padding: 1px 0.5em 1px 0.5em; font-size: 0.8em; }\n";
-    echo "    a.trailer { color: #606060; text-decoration: none; }\n";
-    echo "    img.acqlink { vertical-align: middle; height: 3em; max-width: 2.9em; border: 1px #909090 solid; }\n";
-    echo "    a { text-decoration: none; color: #000090; }\n";
-    echo "    hr { margin: 0.9em 0 0.9em 0; color: #E0E0E0; }\n";
-    echo "    span.author { color: #707070; }\n";
-    echo "  </style>\n";
-    echo "</head>\n";
-    echo "<body>\n";
-    echo "  <p class=\"menutitle\">" . $pagetitle . "</p>\n";
-  }
-}
-
-
-function printlinks($outformat) {
-  if ($outformat == "atom") {
-    echo "  <link rel=\"start\" title=\"Home\"\n";
-    echo "        href=\"" . $_SERVER['PHP_SELF'] . "?f=" . $outformat . "\"\n";
-    echo "        type=\"application/atom+xml;profile=opds-catalog;kind=navigation\"/>\n";
-    echo "\n";
-    echo "  <link rel=\"self\"\n";
-    echo "        href=\"" . $_SERVER['PHP_SELF'] . "?f=" . $outformat . "\"\n";
-    echo "        type=\"application/atom+xml;profile=opds-catalog;kind=navigation\"/>\n";
-    echo "\n";
-    echo "  <link rel=\"search\" title=\"Search\"\n";
-    echo "        href=\"" . $_SERVER['PHP_SELF'] . "?f=" . $outformat . "&amp;action=searchform\"\n";
-    echo "        type=\"application/opensearchdescription+xml\"/>\n";
-    echo "\n";
-  } else if ($outformat == "html") {
-    echo "  <p><form name=\"input\" action=\"" . $_SERVER['PHP_SELF'] . "\" method=\"get\"><a href=\"" . $_SERVER['PHP_SELF'] . "?f=" . $outformat . "\">Home</a> <input type=\"text\" name=\"query\"><input type=\"hidden\" name=\"action\" value=\"titles\"><input type=\"hidden\" name=\"f\" value=\"{$outformat}\"><input type=\"submit\" value=\"search\"></form></p>\n";
-    //echo "  <p><a href=\"" . $_SERVER['PHP_SELF'] . "?f=" . $outformat . "\">Home</a></p>\n";
-    echo "  <hr>\n";
+    printheaders_html($pageinfo);
   }
 }
 
 
 function printnaventry($outformat, $title, $urlparams, $iconfile) {
+  $nav = array();
+  $nav['title'] = $title;
+  $nav['url'] = $_SERVER['PHP_SELF'] . '?f=' . $outformat . '&amp;' . $urlparams;
+  $nav['icon'] = $iconfile;
   if ($outformat == "atom") {
-    echo "  <entry>\n";
-    echo "    <title>" . htmlentities($title, ENT_XML1, "UTF-8") . "</title>\n";
-    echo "    <id>" . md5($title . $urlparams) . "</id>\n";
-    echo "    <content type=\"text\"></content>\n";
-    echo "    <link type=\"application/atom+xml;profile=opds-catalog;kind=navigation\" href=\"" . $_SERVER['PHP_SELF'] . "?f=" . $outformat . "&amp;" . $urlparams . "\"/>\n";
-    if ($iconfile != NULL) echo "    <link href=\"" . $iconfile . "\" type=\"image/png\" rel=\"http://opds-spec.org/image/thumbnail\"/>\n";
-    echo "    <updated>" . date(DATE_ATOM) . "</updated>\n";
-    echo "  </entry>\n";
+    printnaventry_atom($nav);
   } else if ($outformat == "html") {
-    $iconhtml = "";
-    if ($iconfile != NULL) $iconhtml = "<img src=\"" . $iconfile . "\" style=\"height: 2em; padding: 0 1em 0 0; vertical-align: middle;\">";
-    echo "  <p>" . $iconhtml . "<a href=\"" . $_SERVER['PHP_SELF'] . "?f=" . $outformat . "&amp;" . $urlparams . "\">" . htmlentities($title) . "</a></p>\n";
+    printnaventry_html($nav);
   }
 }
 
 
 function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $prettyurls) {
-  /* Prepare the epub link in advance, since it can have different forms, depending on "pretty URLs" */
-  if ($prettyurls == 1) {
-      $aqlink = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . ".epub";
-    } else {
-      $aqlink = $_SERVER['PHP_SELF'] . "?action=getfile&amp;query=" . $crc32;
+  // prepare the array with metadata
+  $meta = array();
+  $meta['title'] = $title;
+  $meta['crc'] = $crc32;
+  $meta['author'] = $author;
+  $meta['lang'] = $language;
+  $meta['desc'] = $description;
+  $meta['publisher'] = $publisher;
+  $meta['pubdate'] = $pubdate;
+  if ($prettyurls == 1) { // the epub link can have different forms, depending on the "pretty URLs" setting
+    $meta['aqlink'] = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . ".epub";
+  } else {
+    $meta['aqlink'] = $_SERVER['PHP_SELF'] . "?action=getfile&amp;query=" . $crc32;
   }
+  $meta['coverlink'] = $_SERVER['PHP_SELF'] . "?action=getcover&amp;query={$crc32}";
+  $meta['thumblink'] = $_SERVER['PHP_SELF'] . "?action=getthumb&amp;query={$crc32}";
+
+  // call the appropriate output plugin
   if ($outformat == "atom") {
-    echo "  <entry>\n";
-    echo "    <title>" . htmlentities($title, ENT_XML1, "UTF-8") . "</title>\n";
-    echo "    <id>" . $crc32 . "</id>\n";
-    echo "    <updated>" . date(DATE_ATOM) . "</updated>\n";
-    echo "    <author>\n";
-    echo "      <name>" . $author . "</name>\n";
-    echo "    </author>\n";
-    echo "    <dc:language>" . htmlentities($language, ENT_XML1, "UTF-8") . "</dc:language>\n";
-    echo "    <dcterms:issued>" . htmlentities($pubdate, ENT_XML1, "UTF-8") . "</dcterms:issued>\n";
-    echo "    <dcterms:publisher>" . htmlentities($publisher, ENT_XML1, "UTF-8") . "</dcterms:publisher>\n";
-    echo "    <summary type=\"text\">" . htmlentities($description, ENT_XML1, "UTF-8") . "</summary>\n";
-    echo "    <link rel=\"http://opds-spec.org/image\"\n";
-    echo "        href=\"" . $_SERVER['PHP_SELF'] . "?action=getcover&amp;query={$crc32}\"\n";
-    echo "        type=\"image/jpeg\"/>\n";
-    echo "    <link rel=\"http://opds-spec.org/image/thumbnail\"\n";
-    echo "        href=\"" . $_SERVER['PHP_SELF'] . "?action=getthumb&amp;query={$crc32}\"\n";
-    echo "        type=\"image/jpeg\"/>\n";
-    echo "    <link rel=\"http://opds-spec.org/acquisition\"\n";
-    echo "        href=\"{$aqlink}\"\n";
-    echo "        type=\"application/epub+zip\"/>\n";
-    //<link href="http://www.archive.org/download/bequest_jg_librivox/bequest_jg_librivox.pdf" type="application/pdf" rel="http://opds-spec.org/acquisition"/>
-    echo "  </entry>\n";
+    printaqentry_atom($meta);
   } else if ($outformat == "html") {
-    $coverurl = $_SERVER['PHP_SELF'] . "?action=getcover&amp;query=" . $crc32;
-    $thumburl = $_SERVER['PHP_SELF'] . "?action=getthumb&amp;query=" . $crc32;
-    echo "  <p class=\"acqimg\"><a href=\"{$coverurl}\"><img src=\"{$thumburl}\" class=\"acqlink\"></a></p>\n";
-    echo "  <p class=\"acqlink\"><a href=\"{$aqlink}\">" . htmlentities($title) . "</a><span class=\"author\">" . htmlentities(" (" . $language . ")") . "<br>\n" . htmlentities($author) . "</span></p>\n";
+    printaqentry_html($meta);
   }
 }
 
 
 function printtrailer($outformat) {
   global $pver;
+
+  $info = array('version'=>$pver, 'homepage'=>"http://elibsrv.sourceforge.net");
+
   if ($outformat == "atom") {
-      echo "\n";
-      echo "</feed>\n";
-    } else if ($outformat == "html") {
-      echo "  <p class=\"trailer\"><a href=\"http://sourceforge.net/p/elibsrv\" class=\"trailer\">elibsrv frontend version {$pver}</a></p>\n";
-      echo "</body>\n";
-      echo "</html>\n";
+    printtrailer_atom($info);
+  } else if ($outformat == "html") {
+    printtrailer_html($info);
   }
 }
 
