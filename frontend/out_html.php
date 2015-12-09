@@ -71,7 +71,7 @@ function printheaders_html(array $pageinfo) {
   echo "<body>\n";
   echo "  <p class=\"menutitle\">" . htmlentities($pageinfo['title']) . "</p>\n";
   // build the menu bar
-  echo '  <p><form name="input" action="' . $pageinfo['SELF'] . '" method="get"><a href="' . $pageinfo['PHP_SELF'] . '?f=html">Home</a> <input type="text" name="query"><input type="hidden" name="action" value="titles"><input type="hidden" name="f" value="html"><input type="submit" value="search"></form></p>' . "\n";
+  echo '  <p><form name="input" action="' . $pageinfo['self'] . '" method="get"><a href="' . $pageinfo['self'] . '?f=html">Home</a> <input type="text" name="query"><input type="hidden" name="action" value="titles"><input type="hidden" name="f" value="html"><input type="submit" value="search"></form></p>' . "\n";
   echo "  <hr>\n";
 }
 
