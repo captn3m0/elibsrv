@@ -114,7 +114,7 @@ const unsigned long crc32_tab[256] = {
 /* Return a 32-bit CRC of the contents of the buffer. */
 
 
-unsigned long crc32_init() {
+unsigned long crc32_init(void) {
   return(0xFFFFFFFF);
 }
 

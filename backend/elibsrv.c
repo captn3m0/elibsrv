@@ -31,7 +31,7 @@
 
 /* strips the 'type' and 'comment' parts of an epub entry, if any. example:
  * creator: Jules Vernes (auhtor)   ->   Jules Vernes */
-void striptype(char *dst, char *src) {
+static void striptype(char *dst, char *src) {
   char *s;
   s = strstr((char *) src, ": ");
   if (s != NULL) sprintf(dst, "%s", s + 2);
@@ -42,7 +42,7 @@ void striptype(char *dst, char *src) {
 
 /* returns 0 str doesn't start with one of the strings listed in the 'start'
  * array, non-zero otherwise */
-int stringstartswith(char **list, char *s) {
+static int stringstartswith(char **list, char *s) {
   int i;
   if (list == NULL) return(1);
   for (i = 0; list[i] != NULL; i++) {

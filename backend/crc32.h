@@ -14,7 +14,7 @@
 #ifndef CRC32_H_SENTINEL
 #define CRC32_H_SENTINEL
 
-unsigned long crc32_init();
+unsigned long crc32_init(void);
 
 /* This computes a 32 bit CRC of the data in the buffer, and returns the
    CRC.  The polynomial used is 0xedb88320. */
