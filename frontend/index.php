@@ -3,7 +3,7 @@
 /*
  * elibsrv - a light OPDS indexing server for EPUB ebooks.
  *
- * Copyright (C) Mateusz Viste 2014
+ * Copyright (C) 2014-2016 Mateusz Viste
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +20,13 @@
  */
 
 
-$pver = "20151209";
+$pver = "20151210";
 
 
 // include output plugins
 require 'out_html.php';
 require 'out_atom.php';
+require 'out_dump.php';
 
 
 function getconf($array, $key) {
@@ -144,9 +145,9 @@ function getLocalFilename($db, $query) {
   $result = pg_query($query);
   $myrow = pg_fetch_assoc($result);
   if ($myrow) {
-      $filename = $myrow['file'];
-    } else {
-      echo "Error: no matching file.\n";
+    $filename = $myrow['file'];
+  } else {
+    echo "Error: no matching file.\n";
   }
   pg_free_result($result);
   return($filename);
@@ -162,6 +163,8 @@ function printheaders($outformat, $pageid, $pagetitle) {
     printheaders_atom($pageinfo);
   } else if ($outformat == "html") {
     printheaders_html($pageinfo);
+  } else if ($outformat == "dump") {
+    printheaders_dump($pageinfo);
   }
 }
 
@@ -175,11 +178,13 @@ function printnaventry($outformat, $title, $urlparams, $iconfile) {
     printnaventry_atom($nav);
   } else if ($outformat == "html") {
     printnaventry_html($nav);
+  } else if ($outformat == "dump") {
+    printnaventry_dump($nav);
   }
 }
 
 
-function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $prettyurls) {
+function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls) {
   // prepare the array with metadata
   $meta = array();
   $meta['title'] = $title;
@@ -189,6 +194,7 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
   $meta['desc'] = $description;
   $meta['publisher'] = $publisher;
   $meta['pubdate'] = $pubdate;
+  $meta['catdate'] = $catdate;
   if ($prettyurls == 1) { // the epub link can have different forms, depending on the "pretty URLs" setting
     $meta['aqlink'] = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . ".epub";
   } else {
@@ -202,6 +208,8 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
     printaqentry_atom($meta);
   } else if ($outformat == "html") {
     printaqentry_html($meta);
+  } else if ($outformat == "dump") {
+    printaqentry_dump($meta);
   }
 }
 
@@ -215,13 +223,14 @@ function printtrailer($outformat) {
     printtrailer_atom($info);
   } else if ($outformat == "html") {
     printtrailer_html($info);
+  } else if ($outformat == "dump") {
+    printtrailer_dump($info);
   }
 }
 
 
 function mainindex($outformat, $title) {
   printheaders($outformat, "mainmenu", $title);
-  printlinks($outformat);
   printnaventry($outformat, "Authors", "action=authors", "images/authors.png");
   printnaventry($outformat, "Languages", "action=langs", "images/langs.png");
   printnaventry($outformat, "Tags", "action=tags", "images/tags.png");
@@ -234,26 +243,25 @@ function mainindex($outformat, $title) {
 
 function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls) {
   printheaders($outformat, "titlesindex", "Titles");
-  printlinks($outformat);
 
   if (! empty($authorfilter)) {
-      $sqlauthorfilter = pg_escape_string($db, $authorfilter);
-      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
-    } else if (! empty($langfilter)) {
-      $sqllangfilter = pg_escape_string($db, $langfilter);
-      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
-    } else if (! empty($tagfilter)) {
-      $sqltagfilter = pg_escape_string($db, $tagfilter);
-      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language;";
-    } else if ($randflag != 0) {
-      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books ORDER BY random() LIMIT 5;";
-    } else if ($latest > 0) {
-      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books WHERE modtime > NOW() - INTERVAL '{$latest} DAYS' ORDER BY modtime DESC, title, author, language;";
-    } else if (! empty($search)) {
-      $sqlsearch = pg_escape_string($db, $search);
-      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";
-    } else {
-      $query = "SELECT crc32, title, author, description, language, publisher, pubdate FROM books ORDER BY title, author, language;";
+    $sqlauthorfilter = pg_escape_string($db, $authorfilter);
+    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
+  } else if (! empty($langfilter)) {
+    $sqllangfilter = pg_escape_string($db, $langfilter);
+    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
+  } else if (! empty($tagfilter)) {
+    $sqltagfilter = pg_escape_string($db, $tagfilter);
+    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language;";
+  } else if ($randflag != 0) {
+    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books ORDER BY random() LIMIT 5;";
+  } else if ($latest > 0) {
+    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books WHERE modtime > NOW() - INTERVAL '{$latest} DAYS' ORDER BY modtime DESC, title, author, language;";
+  } else if (! empty($search)) {
+    $sqlsearch = pg_escape_string($db, $search);
+    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";
+  } else {
+    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books ORDER BY title, author, language;";
   }
   $result = pg_query($query);
 
@@ -265,7 +273,8 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $language = strip_tags($myrow['language']);
     $publisher = strip_tags($myrow['publisher']);
     $pubdate = strip_tags($myrow['pubdate']);
-    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $prettyurls);
+    $catdate = strtotime($myrow['modtime']);
+    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls);
   }
   pg_free_result($result);
 
@@ -275,7 +284,6 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
 
 function authorsindex($outformat, $db) {
   printheaders($outformat, "authorsindex", "Authors");
-  printlinks($outformat);
 
   $query = "SELECT author FROM books WHERE author != '' GROUP BY author ORDER BY author;";
   $result = pg_query($query);
@@ -292,7 +300,6 @@ function authorsindex($outformat, $db) {
 
 function langsindex($outformat, $db) {
   printheaders($outformat, "langsindex", "Languages");
-  printlinks($outformat);
 
   $query = "SELECT language FROM books WHERE language != '' GROUP BY language ORDER BY language;";
   $result = pg_query($query);
@@ -309,7 +316,6 @@ function langsindex($outformat, $db) {
 
 function tagsindex($outformat, $db) {
   printheaders($outformat, "tagsindex", "Tags");
-  printlinks($outformat);
 
   $query = "SELECT tag FROM tags GROUP BY tag ORDER BY tag;";
   $result = pg_query($query);
@@ -336,6 +342,7 @@ function searchform($outformat) {
   echo "  <Query role=\"example\" searchTerms=\"robot\"/>\n";
   echo "</OpenSearchDescription>\n";
 }
+
 
 function computeThumbCacheFilename($thumbdir, $crc32) {
   if (! empty($thumbdir)) return($thumbdir . '/elibsrv-thumbcache-' . $crc32);
@@ -380,7 +387,10 @@ if (isset($_GET['l'])) $langfilter = $_GET['l'];
 if (isset($_GET['t'])) $tagfilter = $_GET['t'];
 if (isset($_GET['f'])) $outformat = $_GET['f'];
 
-if (($outformat != "html") && ($outformat != "atom")) $outformat = getDefaultOutformat();
+// validate that outformat is a known value
+if (! in_array($outformat, array('atom', 'dump', 'html'))) {
+  $outformat = getDefaultOutformat();
+}
 
 // If this is about thumbnail, see if we can serve from cache and quit without having to connect to sql
 if (($action == "getthumb") && (file_exists(computeThumbCacheFilename($thumbdir, $query)))) {
@@ -396,28 +406,16 @@ if ($db == FALSE) {
 }
 
 if ($action == "getfile") {
-    header("content-type: application/epub+zip");
-    $localfilename = getLocalFilename($db, $query);
-    $shortfile = basename($localfilename);
-    if ($localfilename != NULL) readfile($localfilename);
-  } else if ($action == "getthumb") {
-    $cachethumb = computeThumbCacheFilename($thumbdir, $query);
-    if (file_exists($cachethumb)) {
-      header('Content-Type: image/jpeg');
-      readfile($cachethumb);
-    } else {
-      $coverinzip = dirname(__FILE__) . "/images/nocover.png";
-      $localfilename = getLocalFilename($db, $query);
-      if ($localfilename != NULL) {
-        $coverfile = getEpubCoverFile($localfilename);
-        if ($coverfile != NULL) {
-          $coverinzip = "zip://" . $localfilename . "#" . $coverfile;
-        }
-      }
-      /* return the cover file */
-      returnImageThumbnail($coverinzip, 120, $cachethumb);
-    }
-  } else if ($action == "getcover") {
+  header("content-type: application/epub+zip");
+  $localfilename = getLocalFilename($db, $query);
+  $shortfile = basename($localfilename);
+  if ($localfilename != NULL) readfile($localfilename);
+} else if ($action == "getthumb") {
+  $cachethumb = computeThumbCacheFilename($thumbdir, $query);
+  if (file_exists($cachethumb)) {
+    header('Content-Type: image/jpeg');
+    readfile($cachethumb);
+  } else {
     $coverinzip = dirname(__FILE__) . "/images/nocover.png";
     $localfilename = getLocalFilename($db, $query);
     if ($localfilename != NULL) {
@@ -427,24 +425,36 @@ if ($action == "getfile") {
       }
     }
     /* return the cover file */
-    header("content-type: " . image_type_to_mime_type(exif_imagetype($coverinzip)));
-    readfile($coverinzip);
-  } else if ($action == "titles") {
-    titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, 0, 0, $query, $prettyurls);
-  } else if ($action == "latest") {
-    titlesindex($outformat, $db, NULL, NULL, NULL, 0, $latestdays, NULL, $prettyurls);
-  } else if ($action == "authors") {
-    authorsindex($outformat, $db);
-  } else if ($action == "langs") {
-    langsindex($outformat, $db);
-  } else if ($action == "tags") {
-    tagsindex($outformat, $db);
-  } else if ($action == "rand") {
-    titlesindex($outformat, $db, NULL, NULL, NULL, 1, 0, NULL, $prettyurls);
-  } else if ($action == "searchform") {
-    searchform($outformat);
-  } else {
-    mainindex($outformat, $title);
+    returnImageThumbnail($coverinzip, 120, $cachethumb);
+  }
+} else if ($action == "getcover") {
+  $coverinzip = dirname(__FILE__) . "/images/nocover.png";
+  $localfilename = getLocalFilename($db, $query);
+  if ($localfilename != NULL) {
+    $coverfile = getEpubCoverFile($localfilename);
+    if ($coverfile != NULL) {
+      $coverinzip = "zip://" . $localfilename . "#" . $coverfile;
+    }
+  }
+  /* return the cover file */
+  header("content-type: " . image_type_to_mime_type(exif_imagetype($coverinzip)));
+  readfile($coverinzip);
+} else if ($action == "titles") {
+  titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, 0, 0, $query, $prettyurls);
+} else if ($action == "latest") {
+  titlesindex($outformat, $db, NULL, NULL, NULL, 0, $latestdays, NULL, $prettyurls);
+} else if ($action == "authors") {
+  authorsindex($outformat, $db);
+} else if ($action == "langs") {
+  langsindex($outformat, $db);
+} else if ($action == "tags") {
+  tagsindex($outformat, $db);
+} else if ($action == "rand") {
+  titlesindex($outformat, $db, NULL, NULL, NULL, 1, 0, NULL, $prettyurls);
+} else if ($action == "searchform") {
+  searchform($outformat);
+} else {
+  mainindex($outformat, $title);
 }
 
 // close the SQL connection
