@@ -1,8 +1,8 @@
 
 elibsrv - a light library server for EPUB ebooks
-Copyright (C) 2014 Mateusz Viste
+Copyright (C) 2014-2016 Mateusz Viste
 
-homepage: http://sourceforge.net/p/elibsrv/
+homepage: http://elibsrv.sourceforge.net
 
 
 "Book collectors do not buy books to read - they buy books because they have read them."
