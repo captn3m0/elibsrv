@@ -1,4 +1,4 @@
-CFLAGS = -std=gnu89 -Wall -Wextra -pedantic -Wformat-security -I/usr/include/postgresql -I/usr/include/pgsql
+CFLAGS = -std=gnu89 -Wall -Wextra -pedantic -Wno-long-long -Wformat-security -I/usr/include/postgresql -I/usr/include/pgsql
 CLIBS = -lepub -lpq
 
 all: elibsrv
