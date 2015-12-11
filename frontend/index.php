@@ -85,7 +85,10 @@ function returnImageThumbnail($filename, $height, $cachedst) {
 
 // Returns either "html" or "atom", depending on the client's user agent
 function getDefaultOutformat() {
-  $ua = $_SERVER['HTTP_USER_AGENT'];
+  $ua = "";
+  if (isset($_SERVER['HTTP_USER_AGENT'])) {
+    $ua = $_SERVER['HTTP_USER_AGENT'];
+  }
   // detect Firefox
   if (preg_match("/^.* Firefox\/.*$/", $ua) == 1) return("html");
 
