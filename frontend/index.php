@@ -191,7 +191,7 @@ function printnaventry($outformat, $title, $urlparams, $iconfile) {
 }
 
 
-function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls) {
+function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls, $filesize) {
   // prepare the array with metadata
   $meta = array();
   $meta['title'] = $title;
@@ -202,6 +202,7 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
   $meta['publisher'] = $publisher;
   $meta['pubdate'] = $pubdate;
   $meta['catdate'] = $catdate;
+  $meta['filesize'] = intval($filesize);
   if ($prettyurls == 1) { // the epub link can have different forms, depending on the "pretty URLs" setting
     $meta['aqlink'] = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . ".epub";
   } else {
@@ -249,26 +250,27 @@ function mainindex($outformat, $title) {
 
 
 function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls) {
+  $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, filesize';
   printheaders($outformat, "titlesindex", "Titles");
 
   if (! empty($authorfilter)) {
     $sqlauthorfilter = pg_escape_string($db, $authorfilter);
-    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
+    $query = "SELECT {$fieldslist} FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
   } else if (! empty($langfilter)) {
     $sqllangfilter = pg_escape_string($db, $langfilter);
-    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
+    $query = "SELECT {$fieldslist} FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
   } else if (! empty($tagfilter)) {
     $sqltagfilter = pg_escape_string($db, $tagfilter);
-    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language;";
   } else if ($randflag != 0) {
-    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books ORDER BY random() LIMIT 5;";
+    $query = "SELECT {$fieldslist} FROM books ORDER BY random() LIMIT 5;";
   } else if ($latest > 0) {
-    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books WHERE modtime > NOW() - INTERVAL '{$latest} DAYS' ORDER BY modtime DESC, title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books WHERE modtime > NOW() - INTERVAL '{$latest} DAYS' ORDER BY modtime DESC, title, author, language;";
   } else if (! empty($search)) {
     $sqlsearch = pg_escape_string($db, $search);
-    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";
   } else {
-    $query = "SELECT crc32, title, author, description, language, publisher, pubdate, modtime FROM books ORDER BY title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books ORDER BY title, author, language;";
   }
   $result = pg_query($query);
 
@@ -281,7 +283,8 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $publisher = strip_tags($myrow['publisher']);
     $pubdate = strip_tags($myrow['pubdate']);
     $catdate = strtotime($myrow['modtime']);
-    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls);
+    $filesize = $myrow['filesize'];
+    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls, $filesize);
   }
   pg_free_result($result);
 
