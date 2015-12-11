@@ -107,7 +107,8 @@ function getDefaultOutformat() {
 // Returns a string with the filename of the cover file inside an epub file (so I can access it later using zip://$temp#$file)
 function getEpubCoverFile($epubfile) {
   $result = NULL;
-  $firstimg = NULL;
+  $largest_img = NULL;
+  $largest_img_size = 0;
   $za = zip_open($epubfile);
   if (! is_resource($za)) return(NULL);
   // here I should look for $za being valid
@@ -117,9 +118,12 @@ function getEpubCoverFile($epubfile) {
     $filename = zip_entry_name($ze);
     $filesize = zip_entry_filesize($ze);
     if (substr($filename, -1) != '/') {
-      // remember the first image of at least 4 KiB found in the archive
-      if ((preg_match("/^.*\.(jpeg|jpg|png)$/", $filename) == 1) && ($firstimg == NULL) && ($filesize >= 4096)) $firstimg = $filename;
-      // look for images that contains the word "cover"
+      // remember the largest image in the archive
+      if ((preg_match("/^.*\.(jpeg|jpg|png)$/", $filename) == 1) && ($filesize > $largest_img_size)) {
+        $largest_img = $filename;
+        $largest_img_size = $filesize;
+      }
+      // look for images that contain the word "cover"
       if (preg_match("/^.*[cC][oO][vV][eE][rR].*\.(jpeg|jpg|png)$/", $filename) == 1) {
         $result = $filename;
         break;
@@ -129,8 +133,8 @@ function getEpubCoverFile($epubfile) {
     }
   }
   zip_close($za);
-  // if no "sure" result found, then fallback to the first image that was found
-  if ($result == NULL) $result = $firstimg;
+  // if no "sure" result found, then fallback to the largest image that was found
+  if ($result == NULL) $result = $largest_img;
   return($result);
 }
 
