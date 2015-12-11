@@ -142,23 +142,25 @@ static void trimlf(char *str) {
 }
 
 
-/* compute CRC32 of a file. returns 0 on success, non-zero otherwise. */
-static int computecrc32(unsigned long *crc32, char *filename) {
+/* compute CRC32 of a file. returns filesize on success, negative value otherwise. */
+static long computecrc32(unsigned long *crc32, char *filename) {
   #define crcbuflen 8192
   unsigned char buf[crcbuflen];
+  long fsize = 0;
   FILE *fd;
   size_t len;
   *crc32 = crc32_init();
   fd = fopen(filename, "rb");
-  if (fd == NULL) return(1);
+  if (fd == NULL) return(-1);
   for (;;) {
     len = fread(buf, 1, crcbuflen, fd);
     if (len == 0) break; /* eof */
+    fsize += len;
     crc32_feed(crc32, buf, len);
   }
   fclose(fd);
   crc32_finish(crc32);
-  return(0);
+  return(fsize);
 }
 
 
@@ -232,14 +234,16 @@ int main(int argc, char **argv) {
   libsql_sendreq("DELETE FROM books;"); /* I could use TRUNCATE here for much better performances, but the problem with TRUNCATE is that it takes an exclusive lock on the table, so the system would become unavailable during indexation time */
   for (;;) {
     int duplicatefound = 0;
+    long fsize;
     char *pubfilter[] = { "publication:", "original-publication:", "18", "19", "20", NULL };
 
     /* fetch the filename to process from stdin */
     if (fgets(epubfilename, FILENAMELEN, stdin) == NULL) break;
     trimlf(epubfilename); /* trim the possible LF trailer from the filename (fgets appends it) */
 
-    /* compute crc32 */
-    if (computecrc32(&crc32, epubfilename) != 0) {
+    /* compute crc32 and get filesize */
+    fsize = computecrc32(&crc32, epubfilename);
+    if (fsize < 0) {
       fprintf(stderr, "Failed to access file: %s\n", epubfilename);
       continue;
     } else if (verbosemode != 0) {
@@ -306,7 +310,7 @@ int main(int argc, char **argv) {
     free(pubdate);
 
     /* Insert the value into SQL */
-    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,file,author,title,language,description,modtime,publisher,pubdate) VALUES (%lu,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())),%s,%s);", crc32, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32, sqlpublisher, sqlpubdate);
+    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,file,author,title,language,description,modtime,publisher,pubdate,filesize) VALUES (%lu,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())),%s,%s,%ld);", crc32, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32, sqlpublisher, sqlpubdate, fsize);
     if (libsql_sendreq(sqlbuf) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
       libsql_sendreq("ROLLBACK;");

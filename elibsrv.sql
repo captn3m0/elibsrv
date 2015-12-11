@@ -11,6 +11,7 @@ CREATE TABLE books (file VARCHAR NOT NULL,
                     description VARCHAR NOT NULL,
                     publisher VARCHAR NOT NULL,
                     pubdate VARCHAR NOT NULL,
+                    filesize INTEGER NOT NULL,
                     modtime TIMESTAMP WITHOUT TIME ZONE NOT NULL);
 CREATE INDEX books_author_idx ON books(author);
 CREATE INDEX books_title_idx ON books(title);
