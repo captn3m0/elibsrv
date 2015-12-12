@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20151210";
+$pver = "20151212";
 
 
 // include output plugins
@@ -191,7 +191,7 @@ function printnaventry($outformat, $title, $urlparams, $iconfile) {
 }
 
 
-function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls, $filesize) {
+function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls, $filesize, $filename) {
   // prepare the array with metadata
   $meta = array();
   $meta['title'] = $title;
@@ -203,6 +203,7 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
   $meta['pubdate'] = $pubdate;
   $meta['catdate'] = $catdate;
   $meta['filesize'] = intval($filesize);
+  $meta['filename'] = $filename;
   if ($prettyurls == 1) { // the epub link can have different forms, depending on the "pretty URLs" setting
     $meta['aqlink'] = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . ".epub";
   } else {
@@ -250,7 +251,7 @@ function mainindex($outformat, $title) {
 
 
 function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls) {
-  $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, filesize';
+  $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, file, filesize';
   printheaders($outformat, "titlesindex", "Titles");
 
   if (! empty($authorfilter)) {
@@ -284,7 +285,8 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $pubdate = strip_tags($myrow['pubdate']);
     $catdate = strtotime($myrow['modtime']);
     $filesize = $myrow['filesize'];
-    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls, $filesize);
+    $filename = $myrow['file'];
+    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls, $filesize, $filename);
   }
   pg_free_result($result);
 

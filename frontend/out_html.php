@@ -40,6 +40,7 @@
  *     $meta['aqlink']    - acquisition link (can be used to fetch the actual ebook file)
  *     $meta['coverlink'] - cover link (can be used to fetch the ebook's cover image)
  *     $meta['thumblink'] - thumbnail link (can be used to fetch a thumbnail image of the cover)
+ *     $meta['filename']  - the local filename of the ebook file
  *     $meta['filesize']  - the ebook's file size, in bytes
  *
  * printtrailer_SUFFIX(array $info)
