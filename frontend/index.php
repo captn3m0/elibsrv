@@ -191,7 +191,7 @@ function printnaventry($outformat, $title, $urlparams, $iconfile) {
 }
 
 
-function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls, $filesize, $filename) {
+function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename) {
   // prepare the array with metadata
   $meta = array();
   $meta['title'] = $title;
@@ -202,6 +202,7 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
   $meta['publisher'] = $publisher;
   $meta['pubdate'] = $pubdate;
   $meta['catdate'] = $catdate;
+  $meta['moddate'] = $moddate;
   $meta['filesize'] = intval($filesize);
   $meta['filename'] = $filename;
   if ($prettyurls == 1) { // the epub link can have different forms, depending on the "pretty URLs" setting
@@ -251,7 +252,7 @@ function mainindex($outformat, $title) {
 
 
 function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls) {
-  $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, file, filesize';
+  $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, moddate, file, filesize';
   printheaders($outformat, "titlesindex", "Titles");
 
   if (! empty($authorfilter)) {
@@ -284,9 +285,10 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $publisher = strip_tags($myrow['publisher']);
     $pubdate = strip_tags($myrow['pubdate']);
     $catdate = strtotime($myrow['modtime']);
+    $moddate = strtotime($myrow['moddate']);
     $filesize = $myrow['filesize'];
     $filename = $myrow['file'];
-    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $prettyurls, $filesize, $filename);
+    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename);
   }
   pg_free_result($result);
 

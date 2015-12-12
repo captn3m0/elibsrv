@@ -36,6 +36,7 @@
  *     $meta['publisher'] - ebook's publisher
  *     $meta['pubdate']   - ebook's publication date
  *     $meta['catdate']   - date and time when the ebook has been cataloged
+ *     $meta['moddate']   - date and time when the ebook has been last modified
  *     $meta['crc']       - CRC32 sum of the ebook file
  *     $meta['aqlink']    - acquisition link (can be used to fetch the actual ebook file)
  *     $meta['coverlink'] - cover link (can be used to fetch the ebook's cover image)

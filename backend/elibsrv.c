@@ -173,6 +173,7 @@ int main(int argc, char **argv) {
   char *author, *sqlauthor;
   char *publisher, *sqlpublisher;
   char *pubdate, *sqlpubdate;
+  char *moddate, *sqlmoddate;
   char *lang, *sqllang;
   char *sqlbuf;
   char **tags;
@@ -236,6 +237,7 @@ int main(int argc, char **argv) {
     int duplicatefound = 0;
     long fsize;
     char *pubfilter[] = { "publication:", "original-publication:", "18", "19", "20", NULL };
+    char *modfilter[] = { "modification:", NULL };
 
     /* fetch the filename to process from stdin */
     if (fgets(epubfilename, FILENAMELEN, stdin) == NULL) break;
@@ -277,6 +279,7 @@ int main(int argc, char **argv) {
     tags = get_epub_data(epubfile, EPUB_SUBJECT, 64, NULL);
     publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL, NULL);
     pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL, pubfilter);
+    moddate = get_epub_single_data(epubfile, EPUB_DATE, NULL, modfilter);
     epub_close(epubfile);
 
     if (verbosemode != 0) {
@@ -300,6 +303,7 @@ int main(int argc, char **argv) {
     sqldesc = libsql_escape_string(desc, strlen(desc));
     sqlpublisher = libsql_escape_string(publisher, strlen(publisher));
     sqlpubdate = libsql_escape_string(pubdate, strlen(pubdate));
+    sqlmoddate = libsql_escape_string(moddate, strlen(moddate));
 
     /* free original strings */
     free(title);
@@ -310,7 +314,7 @@ int main(int argc, char **argv) {
     free(pubdate);
 
     /* Insert the value into SQL */
-    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,file,author,title,language,description,modtime,publisher,pubdate,filesize) VALUES (%lu,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())),%s,%s,%ld);", crc32, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32, sqlpublisher, sqlpubdate, fsize);
+    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,file,author,title,language,description,modtime,publisher,pubdate,moddate,filesize) VALUES (%lu,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())),%s,%s,%s,%ld);", crc32, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32, sqlpublisher, sqlpubdate, sqlmoddate, fsize);
     if (libsql_sendreq(sqlbuf) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
       libsql_sendreq("ROLLBACK;");
