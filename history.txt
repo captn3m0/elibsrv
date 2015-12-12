@@ -1,0 +1,38 @@
+
+*** elibsrv changelog ***
+
+
+version 20151212:
+ - added publisher and publishing date to the OPDS output,
+ - refactored output code into different 'plugins' for each type of output,
+ - switched the html interface to a sans-serif font for better readability,
+ - the biggest image is elected as cover image if no explicit cover found,
+ - added a configurable 'verbose' mode to the backend for easier debugging,
+ - added a 'dump' output pluging for debugging purposes,
+ - epub backend stores extra sql data: filesize, last modification, filename.
+
+version 20141029:
+ - added czechoslovakian and kashubian country flags,
+ - implemented a local cache for thumbnails (much faster).
+
+version 20141026:
+ - detecting 'trident' IE versions as being html clients,
+ - html book listings are two-lines now (author and title in separate lines),
+ - added a 'latest books' menu,
+ - removed spurious 'NOTICE' messages coming from sql.
+
+version 20140525:
+ - added the 'pretty urls' feature.
+
+version 20140521:
+ - support for custom configuration files,
+ - epub files are returned with more human filenames.
+
+version 20140520:
+ - implemented displaying of cover images,
+ - added a favicon,
+ - configurable title for the ebooks collection,
+ - OPDS search feature.
+
+version 20140517:
+ - first public release.
