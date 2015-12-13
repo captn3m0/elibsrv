@@ -29,6 +29,30 @@
 #include "crc32.h"
 
 
+enum EBOOKFORMATS {
+  FORMAT_EPUB = 0,
+  FORMAT_PDF = 1
+};
+
+
+/* returns the format of an ebook */
+static int getformat(char *filename) {
+  char *ext;
+  /* identify the extension first */
+  ext = strrchr(filename, '.');
+  if (ext == NULL) return(-1);
+  ext += 1;
+  /* */
+  if (strcasecmp("epub", ext) == 0) {
+    return(FORMAT_EPUB);
+  } else if (strcasecmp("pdf", ext) == 0) {
+    return(FORMAT_PDF);
+  } else { /* else it's an unknown format */
+    return(-1);
+  }
+}
+
+
 /* strips the 'type' and 'comment' parts of an epub entry, if any. example:
  * creator: Jules Vernes (auhtor)   ->   Jules Vernes */
 static void striptype(char *dst, char *src) {
@@ -178,7 +202,7 @@ int main(int argc, char **argv) {
   char *sqlbuf;
   char **tags;
   struct epub *epubfile;
-  char epubfilename[FILENAMELEN];
+  char ebookfilename[FILENAMELEN];
   char *sqlepubfilename;
   unsigned long crc32;
   char *dbaddr;
@@ -186,6 +210,7 @@ int main(int argc, char **argv) {
   char *dbuser;
   char *dbpass;
   int i;
+  int format; /* 0 = epub ; 1 = pdf */
   char *configfile;
 
   /* elibsrv must be called with exactly one parameter, and the parameter can't be empty or start with a dash */
@@ -234,22 +259,19 @@ int main(int argc, char **argv) {
   libsql_sendreq("DELETE FROM tags;");
   libsql_sendreq("DELETE FROM books;"); /* I could use TRUNCATE here for much better performances, but the problem with TRUNCATE is that it takes an exclusive lock on the table, so the system would become unavailable during indexation time */
   for (;;) {
-    int duplicatefound = 0;
     long fsize;
-    char *pubfilter[] = { "publication:", "original-publication:", "18", "19", "20", NULL };
-    char *modfilter[] = { "modification:", NULL };
 
     /* fetch the filename to process from stdin */
-    if (fgets(epubfilename, FILENAMELEN, stdin) == NULL) break;
-    trimlf(epubfilename); /* trim the possible LF trailer from the filename (fgets appends it) */
+    if (fgets(ebookfilename, FILENAMELEN, stdin) == NULL) break;
+    trimlf(ebookfilename); /* trim the possible LF trailer from the filename (fgets appends it) */
 
     /* compute crc32 and get filesize */
-    fsize = computecrc32(&crc32, epubfilename);
+    fsize = computecrc32(&crc32, ebookfilename);
     if (fsize < 0) {
-      fprintf(stderr, "Failed to access file: %s\n", epubfilename);
+      fprintf(stderr, "Failed to access file: %s\n", ebookfilename);
       continue;
     } else if (verbosemode != 0) {
-      printf("Will analyze file '%s' (CRC32 %08lX)\n", epubfilename, crc32);
+      printf("Will analyze file '%s' (CRC32 %08lX)\n", ebookfilename, crc32);
     }
 
     /* First of all, check if the file is not already in db */
@@ -260,30 +282,64 @@ int main(int argc, char **argv) {
       break;
     }
     if (libsql_nextresult() == 0) { /* file already exists in db */
-      fprintf(stderr, "WARNING: file '%s' is an exact copy of '%s'. The former won't be indexed.\n", epubfilename, libsql_getresult(0));
-      duplicatefound = 1;
-    }
-    libsql_freeresult();
-    if (duplicatefound != 0) continue;
-
-    epubfile = epub_open(epubfilename, 0 /* debug */);
-    if (epubfile == NULL) {
-      fprintf(stderr, "Failed to analyze file: %s\n", epubfilename);
+      fprintf(stderr, "WARNING: file '%s' is an exact copy of '%s'. The former won't be indexed.\n", ebookfilename, libsql_getresult(0));
+      libsql_freeresult();
       continue;
     }
-    /* fetch metadata */
-    title = get_epub_single_data(epubfile, EPUB_TITLE, "UNTITLED", NULL);
-    author = get_epub_single_data(epubfile, EPUB_CREATOR, "UNKNOWN", NULL);
-    lang = get_epub_single_data(epubfile, EPUB_LANG, "UND", NULL);
-    desc = get_epub_single_data(epubfile, EPUB_DESCRIPTION, NULL, NULL);
-    tags = get_epub_data(epubfile, EPUB_SUBJECT, 64, NULL);
-    publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL, NULL);
-    pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL, pubfilter);
-    moddate = get_epub_single_data(epubfile, EPUB_DATE, NULL, modfilter);
-    epub_close(epubfile);
+    libsql_freeresult();
+
+    /* what format is it? */
+    format = getformat(ebookfilename);
+    if (format < 0) {
+      fprintf(stderr, "WARNING: file '%s' is of unknown format\n", ebookfilename);
+      continue;
+    }
+
+    /* fetch ebook's metadata, depending on what format it is */
+    title = NULL;
+    author = NULL;
+    lang = NULL;
+    desc = NULL;
+    tags = NULL;
+    publisher = NULL;
+    pubdate = NULL;
+    moddate = NULL;
+
+    if (format == FORMAT_EPUB) { /* EPUB */
+      char *pubfilter[] = { "publication:", "original-publication:", "18", "19", "20", NULL };
+      char *modfilter[] = { "modification:", NULL };
+      epubfile = epub_open(ebookfilename, 0 /* debug */);
+      if (epubfile == NULL) {
+        fprintf(stderr, "Failed to analyze file: %s\n", ebookfilename);
+        continue;
+      }
+      /* fetch metadata */
+      title = get_epub_single_data(epubfile, EPUB_TITLE, "UNTITLED", NULL);
+      author = get_epub_single_data(epubfile, EPUB_CREATOR, "UNKNOWN", NULL);
+      lang = get_epub_single_data(epubfile, EPUB_LANG, "UND", NULL);
+      desc = get_epub_single_data(epubfile, EPUB_DESCRIPTION, NULL, NULL);
+      tags = get_epub_data(epubfile, EPUB_SUBJECT, 64, NULL);
+      publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL, NULL);
+      pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL, pubfilter);
+      moddate = get_epub_single_data(epubfile, EPUB_DATE, NULL, modfilter);
+      epub_close(epubfile);
+    } else if (format == FORMAT_PDF) { /* PDF */
+      char *bname;
+      /* TODO primitive title = filename.. shall be replaced by proper metadata reading */
+      bname = strrchr(ebookfilename, '/');
+      if (bname == NULL) {
+        bname = ebookfilename;
+      } else {
+        bname += 1;
+      }
+      title = strdup(bname);
+      /* trim the file extension */
+      bname = strrchr(title, '.');
+      if (bname != NULL) *bname = 0;
+    }
 
     if (verbosemode != 0) {
-      printf("------[ processing: %s ]------\n", epubfilename);
+      printf("------[ processing: %s ]------\n", ebookfilename);
       printf("Title: %s\n", title);
       printf("Author: %s\n", author);
       printf("Tags: ");
@@ -296,14 +352,14 @@ int main(int argc, char **argv) {
       printf("Desc: %s\n", desc);
     }
 
-    sqlepubfilename = libsql_escape_string(epubfilename, strlen(epubfilename));
-    sqltitle = libsql_escape_string(title, strlen(title));
-    sqlauthor = libsql_escape_string(author, strlen(author));
-    sqllang = libsql_escape_string(lang, strlen(lang));
-    sqldesc = libsql_escape_string(desc, strlen(desc));
-    sqlpublisher = libsql_escape_string(publisher, strlen(publisher));
-    sqlpubdate = libsql_escape_string(pubdate, strlen(pubdate));
-    sqlmoddate = libsql_escape_string(moddate, strlen(moddate));
+    sqlepubfilename = libsql_escape_string(ebookfilename);
+    sqltitle = libsql_escape_string(title);
+    sqlauthor = libsql_escape_string(author);
+    sqllang = libsql_escape_string(lang);
+    sqldesc = libsql_escape_string(desc);
+    sqlpublisher = libsql_escape_string(publisher);
+    sqlpubdate = libsql_escape_string(pubdate);
+    sqlmoddate = libsql_escape_string(moddate);
 
     /* free original strings */
     free(title);
@@ -312,9 +368,10 @@ int main(int argc, char **argv) {
     free(desc);
     free(publisher);
     free(pubdate);
+    free(moddate);
 
     /* Insert the value into SQL */
-    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,file,author,title,language,description,modtime,publisher,pubdate,moddate,filesize) VALUES (%lu,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())),%s,%s,%s,%ld);", crc32, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32, sqlpublisher, sqlpubdate, sqlmoddate, fsize);
+    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,format,file,author,title,language,description,modtime,publisher,pubdate,moddate,filesize) VALUES (%lu,%d,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())),%s,%s,%s,%ld);", crc32, format, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32, sqlpublisher, sqlpubdate, sqlmoddate, fsize);
     if (libsql_sendreq(sqlbuf) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
       libsql_sendreq("ROLLBACK;");
@@ -336,7 +393,7 @@ int main(int argc, char **argv) {
       skip = 0;
       if (strstr(tags[i], "http://") == tags[i]) skip = 1; /* skip tags that are web urls */
       if (skip == 0) {
-        sqltag = libsql_escape_string(tags[i], strlen(tags[i]));
+        sqltag = libsql_escape_string(tags[i]);
         snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO tags (book,tag) VALUES (%lu,lower(%s));", crc32, sqltag);
         if (libsql_sendreq(sqlbuf) != 0) {
           fprintf(stderr, "SQL ERROR when trying this / please check your SQL logs: %s\n", sqlbuf);

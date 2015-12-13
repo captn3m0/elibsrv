@@ -2,6 +2,10 @@
 *** elibsrv changelog ***
 
 
+version xxxxxxxx:
+ - added experimental PDF support,
+ - ...
+
 version 20151212:
  - added publisher and publishing date to the OPDS output,
  - refactored output code into different 'plugins' for each type of output,

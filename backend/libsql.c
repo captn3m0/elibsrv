@@ -34,9 +34,10 @@ static PGresult *libsql_res;
 static int libsql_inited = 0, libsql_rescnt = -1;
 
 
-char *libsql_escape_string(char *fromstr, int fromlen) {
+char *libsql_escape_string(char *fromstr) {
   if (libsql_inited == 0) return(NULL);
-  return(PQescapeLiteral(libsql_conn, fromstr, fromlen));
+  if (fromstr == NULL) return(strdup("''")); /* if fromstr is NULL, return a copy of "''" */
+  return(PQescapeLiteral(libsql_conn, fromstr, strlen(fromstr)));
 }
 
 

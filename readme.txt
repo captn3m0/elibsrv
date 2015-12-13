@@ -1,5 +1,5 @@
 
-elibsrv - a light library server for EPUB ebooks
+elibsrv - a light library server for ePub and PDF ebooks
 Copyright (C) 2014-2016 Mateusz Viste
 
 homepage: http://elibsrv.sourceforge.net
@@ -11,7 +11,7 @@ homepage: http://elibsrv.sourceforge.net
 
 [ Intro ]
 
-elibsrv is a virtual library for EPUB files. In more techy terms, it's a light ePub indexing engine providing an OPDS and HTML interface. If you have plenty ePub files and would like to access them remotely via an organized interface, either using your web browser or OPDS-compatible device, elibsrv can be an excellent fit.
+elibsrv is a virtual library for ebook files. In more techy terms, it's a light ePub and PDF indexing engine providing an OPDS and HTML interface. If you have plenty of ePub and/or PDF files and would like to access them remotely via an organized interface, either using your web browser or OPDS-compatible device, elibsrv could be an excellent fit.
 
 elibsrv is based on three blocks: the indexing process (ran periodically, eg. via a crontab entry), the PHP frontend (outputting OPDS or HTML listings), and a PostgreSQL database used to store the indexed metadata.
 
@@ -43,8 +43,10 @@ The installation process of the elibsrv server requires to follow a few steps.
 
 3. Compile the indexing backend process. To do this, simply go to the elibsrv/backend directory, and type 'make'. This should compile you an 'elibsrv' binary executable file.
 
-4. Set up indexing to be performed on a periodical basis (via a crontab entry). Assuming you keep the elibsrv backend in /root/elibsrv/elibsrv, and you keep your EPUB ebooks in /srv/ebooks, and you store your configuration file in /etc/elibsrv.conf, then the cron entry you might want to add to your crontab could look like this:
-0 *    * * *    root    find /srv/ebooks/ -name *.epub | /root/elibsrv/elibsrv /etc/elibsrv.conf
+4. Set up indexing to be performed on a periodical basis (via a crontab entry). Assuming you keep the elibsrv backend in /root/elibsrv/elibsrv, and you keep your EPUB ebooks in /srv/ebooks, and you store your configuration file in /etc/elibsrv.conf, then the cron entry you might want to add to your crontab could look like one of these:
+
+0 *    * * *    root    find /srv/ebooks/ -iname '*.epub' | /root/elibsrv/elibsrv /etc/elibsrv.conf
+0 *    * * *    root    find /srv/ebooks/ -regextype posix-egrep -iregex '.*\.((epub)|(pdf))' | /root/elibsrv/elibsrv /etc/elibsrv.conf
 
 5. Copy all files and directories in frontend/* to your web directory root. If you will want to use "pretty URLs" (which is highly recommended for cross-browsers compatibility), then you will also have to rename the htaccess file to .htaccess (assuming you're running the Apache web server).
 

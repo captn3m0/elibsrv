@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS books;
 
 CREATE TABLE books (file VARCHAR NOT NULL,
                     crc32 BIGINT NOT NULL PRIMARY KEY,
+                    format SMALLINT NOT NULL,
                     author VARCHAR NOT NULL,
                     title VARCHAR NOT NULL,
                     language VARCHAR NOT NULL,
