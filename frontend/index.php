@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20151212";
+$pver = "20151213";
 
 
 // include output plugins
@@ -44,6 +44,16 @@ function getLangIcon($lang) {
   }
   return("flags/unknown.png");
 }
+
+
+function sqlformat2human($sqlformat) {
+  switch (intval($sqlformat)) {
+    case 0: return('epub');
+    case 1: return('pdf');
+    default: return('unknown');
+  }
+}
+
 
 // Outputs the thumbnail of a file, in given height (and proportional width)
 function returnImageThumbnail($filename, $height, $cachedst) {
@@ -142,22 +152,28 @@ function getEpubCoverFile($epubfile) {
 }
 
 
+// returns an array with two elements:
+//   filename  - the local filename
+//   format    - the file format (epub, pdf..)
 function getLocalFilename($db, $query) {
-  $filename = NULL;
+  $res = array();
   if (! is_numeric($query)) {
     echo "Error: invalid query.\n";
-    return;
+    return(NULL);
   }
-  $query = "SELECT file FROM books WHERE crc32={$query};";
+  $query = "SELECT file,format FROM books WHERE crc32={$query};";
   $result = pg_query($query);
   $myrow = pg_fetch_assoc($result);
   if ($myrow) {
-    $filename = $myrow['file'];
+    $res['filename'] = $myrow['file'];
+    $res['format'] = sqlformat2human($myrow['format']);
+    pg_free_result($result);
+    return($res);
   } else {
     echo "Error: no matching file.\n";
+    pg_free_result($result);
+    return(NULL);
   }
-  pg_free_result($result);
-  return($filename);
 }
 
 
@@ -191,7 +207,7 @@ function printnaventry($outformat, $title, $urlparams, $iconfile) {
 }
 
 
-function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename) {
+function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format) {
   // prepare the array with metadata
   $meta = array();
   $meta['title'] = $title;
@@ -205,8 +221,9 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
   $meta['moddate'] = $moddate;
   $meta['filesize'] = intval($filesize);
   $meta['filename'] = $filename;
+  $meta['format'] = $format;
   if ($prettyurls == 1) { // the epub link can have different forms, depending on the "pretty URLs" setting
-    $meta['aqlink'] = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . ".epub";
+    $meta['aqlink'] = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . '.' . $format;
   } else {
     $meta['aqlink'] = $_SERVER['PHP_SELF'] . "?action=getfile&amp;query=" . $crc32;
   }
@@ -252,7 +269,7 @@ function mainindex($outformat, $title) {
 
 
 function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls) {
-  $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, moddate, file, filesize';
+  $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, moddate, file, filesize, format';
   printheaders($outformat, "titlesindex", "Titles");
 
   if (! empty($authorfilter)) {
@@ -288,7 +305,8 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $moddate = strtotime($myrow['moddate']);
     $filesize = $myrow['filesize'];
     $filename = $myrow['file'];
-    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename);
+    $format = sqlformat2human($myrow['format']);
+    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format);
   }
   pg_free_result($result);
 
@@ -408,7 +426,7 @@ if (! in_array($outformat, array('atom', 'dump', 'html'))) {
 
 // If this is about thumbnail, see if we can serve from cache and quit without having to connect to sql
 if (($action == "getthumb") && (file_exists(computeThumbCacheFilename($thumbdir, $query)))) {
-  header('Content-Type: image/jpeg');
+  header('Content-Type: image/jpeg'); // cached thumbnails are ALWAYS jpeg files
   readfile(computeThumbCacheFilename($thumbdir, $query));
   exit(0);
 }
@@ -420,34 +438,34 @@ if ($db == FALSE) {
 }
 
 if ($action == "getfile") {
-  header("content-type: application/epub+zip");
-  $localfilename = getLocalFilename($db, $query);
-  $shortfile = basename($localfilename);
-  if ($localfilename != NULL) readfile($localfilename);
+  $localfile = getLocalFilename($db, $query);
+  if ($localfile != NULL) {
+    if ($localfile['format'] == 'epub') header('content-type: application/epub+zip');
+    if ($localfile['format'] == 'pdf') header('content-type: application/pdf');
+    readfile($localfile['filename']);
+  }
 } else if ($action == "getthumb") {
-  $cachethumb = computeThumbCacheFilename($thumbdir, $query);
-  if (file_exists($cachethumb)) {
-    header('Content-Type: image/jpeg');
-    readfile($cachethumb);
-  } else {
-    $coverinzip = dirname(__FILE__) . "/images/nocover.png";
-    $localfilename = getLocalFilename($db, $query);
-    if ($localfilename != NULL) {
-      $coverfile = getEpubCoverFile($localfilename);
+  $coverinzip = dirname(__FILE__) . "/images/nocover.png";
+  $localfile = getLocalFilename($db, $query);
+  if ($localfile != NULL) {
+    if ($localfile['format'] == 'epub') {
+      $coverfile = getEpubCoverFile($localfile['filename']);
       if ($coverfile != NULL) {
-        $coverinzip = "zip://" . $localfilename . "#" . $coverfile;
+        $coverinzip = "zip://" . $localfile['filename'] . "#" . $coverfile;
       }
     }
-    /* return the cover file */
-    returnImageThumbnail($coverinzip, 120, $cachethumb);
   }
+  /* return the cover file */
+  returnImageThumbnail($coverinzip, 120, $cachethumb);
 } else if ($action == "getcover") {
   $coverinzip = dirname(__FILE__) . "/images/nocover.png";
-  $localfilename = getLocalFilename($db, $query);
-  if ($localfilename != NULL) {
-    $coverfile = getEpubCoverFile($localfilename);
-    if ($coverfile != NULL) {
-      $coverinzip = "zip://" . $localfilename . "#" . $coverfile;
+  $localfile = getLocalFilename($db, $query);
+  if ($localfile != NULL) {
+    if ($localfile['format'] == "epub") {
+      $coverfile = getEpubCoverFile($localfile['filename']);
+      if ($coverfile != NULL) {
+        $coverinzip = "zip://" . $localfile['filename'] . "#" . $coverfile;
+      }
     }
   }
   /* return the cover file */

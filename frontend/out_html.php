@@ -43,6 +43,7 @@
  *     $meta['thumblink'] - thumbnail link (can be used to fetch a thumbnail image of the cover)
  *     $meta['filename']  - the local filename of the ebook file
  *     $meta['filesize']  - the ebook's file size, in bytes
+ *     $meta['format']    - ebook's file format ('epub', 'pdf')
  *
  * printtrailer_SUFFIX(array $info)
  *   used to output the answer's trailer data (if any). this is called once,
@@ -90,7 +91,13 @@ function printnaventry_html(array $nav) {
 
 function printaqentry_html(array $meta) {
   echo '  <p class="acqimg"><a href="' . $meta['coverlink'] . '"><img src="' . $meta['thumblink'] . '" class="acqlink"></a></p>' . "\n";
-  echo '  <p class="acqlink"><a href="' . $meta['aqlink'] . '">' . htmlentities($meta['title']) . '</a><span class="author">' . htmlentities(' (' . $meta['lang'] . ')') . "<br>\n" . htmlentities($meta['author']) . "</span></p>\n";
+  echo '  <p class="acqlink"><a href="' . $meta['aqlink'] . '">' . htmlentities($meta['title']) . '</a><span class="author">' . htmlentities(' (' . $meta['lang'] . ')') . "<br>\n";
+  if (! empty($meta['author'])) {
+    echo htmlentities($meta['author']);
+  } else {
+    echo '&nbsp;';
+  }
+  echo "</span></p>\n";
 }
 
 

@@ -5,5 +5,5 @@
 
 <ifModule mod_rewrite.c>
   RewriteEngine on
-  RewriteRule ^.*files/([0-9]{1,10})/(.*).epub$ index.php?action=getfile&query=$1 [NC]
+  RewriteRule ^.*files/([0-9]{1,10})/(.*)\.(epub|pdf)$ index.php?action=getfile&query=$1 [NC]
 </ifModule>

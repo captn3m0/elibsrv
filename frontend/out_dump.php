@@ -43,6 +43,7 @@
  *     $meta['thumblink'] - thumbnail link (can be used to fetch a thumbnail image of the cover)
  *     $meta['filename']  - the local filename of the ebook file
  *     $meta['filesize']  - the ebook's file size, in bytes
+ *     $meta['format']    - ebook's file format ('epub', 'pdf')
  *
  * printtrailer_SUFFIX(array $info)
  *   used to output the answer's trailer data (if any). this is called once,

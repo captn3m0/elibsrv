@@ -43,6 +43,7 @@
  *     $meta['thumblink'] - thumbnail link (can be used to fetch a thumbnail image of the cover)
  *     $meta['filename']  - the local filename of the ebook file
  *     $meta['filesize']  - the ebook's file size, in bytes
+ *     $meta['format']    - ebook's file format ('epub', 'pdf')
  *
  * printtrailer_SUFFIX(array $info)
  *   used to output the answer's trailer data (if any). this is called once,
@@ -92,6 +93,9 @@ function printnaventry_atom(array $nav) {
 
 
 function printaqentry_atom(array $meta) {
+  $mimetypes = array();
+  $mimetypes['epub'] = 'application/epub+zip';
+  $mimetypes['pdf'] = 'application/pdf';
   echo "  <entry>\n";
   echo "    <title>" . htmlentities($meta['title'], ENT_XML1, "UTF-8") . "</title>\n";
   echo "    <id>" . $meta['crc'] . "</id>\n";
@@ -111,8 +115,7 @@ function printaqentry_atom(array $meta) {
   echo '        type="image/jpeg"/>' . "\n";
   echo '    <link rel="http://opds-spec.org/acquisition"' . "\n";
   echo '        href="' . $meta['aqlink'] . '"' . "\n";
-  echo '        type="application/epub+zip"/>' . "\n";
-  //<link href="http://www.archive.org/download/bequest_jg_librivox/bequest_jg_librivox.pdf" type="application/pdf" rel="http://opds-spec.org/acquisition"/>
+  echo '        type="' . $mimetypes[$meta['format']] . '"/>' . "\n";
   echo "  </entry>\n";
 }
 
