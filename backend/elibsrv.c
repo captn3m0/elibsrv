@@ -350,9 +350,9 @@ int main(int argc, char **argv) {
     }
 
     /* validate the lang */
-    if ((lang != NULL) && (validlang(lang) != 0)) {
+    if (validlang(lang) != 0) {
       free(lang);
-      lang = NULL;
+      lang = strdup("unknown");
     }
 
     if (verbosemode != 0) {
