@@ -91,7 +91,11 @@ function printnaventry_html(array $nav) {
 
 function printaqentry_html(array $meta) {
   echo '  <p class="acqimg"><a href="' . $meta['coverlink'] . '"><img src="' . $meta['thumblink'] . '" class="acqlink"></a></p>' . "\n";
-  echo '  <p class="acqlink"><a href="' . $meta['aqlink'] . '">' . htmlentities($meta['title']) . '</a><span class="author">' . htmlentities(' (' . $meta['lang'] . ')') . "<br>\n";
+  echo '  <p class="acqlink"><a href="' . $meta['aqlink'] . '">' . htmlentities($meta['title']) . '</a><span class="author">';
+
+  if (!empty($meta['lang'])) echo htmlentities(' (' . $meta['lang'] . ')');
+  echo "<br>\n";
+
   if (! empty($meta['author'])) {
     echo htmlentities($meta['author']);
   } else {
