@@ -190,6 +190,19 @@ static long computecrc32(unsigned long *crc32, char *filename) {
 }
 
 
+/* validate lang - returns 0 if seems correct, non-zero otherwise */
+static int validlang(char *lang) {
+  if (lang == NULL) return(-1);
+  if ((lang[0] < 'a') || (lang[1] > 'z')) return(-2);
+  /* detect xx-xx countries, and simplify to xx */
+  if ((lang[2] == '-') && (lang[3] >= 'a') && (lang[3] <= 'z') && (lang[4] >= 'a') && (lang[4] <= 'z') && (lang[5] == 0)) {
+    lang[2] = 0;
+  }
+  if (lang[2] != 0) return(-3);
+  return(0);
+}
+
+
 int main(int argc, char **argv) {
   #define SQLBUFLEN 1024 * 1024
   #define FILENAMELEN 1024
@@ -334,6 +347,12 @@ int main(int argc, char **argv) {
         if (pdf->subject != NULL) desc = strdup(pdf->subject);
         pdfmeta_free(pdf);
       }
+    }
+
+    /* validate the lang */
+    if ((lang != NULL) && (validlang(lang) != 0)) {
+      free(lang);
+      lang = NULL;
     }
 
     if (verbosemode != 0) {

@@ -4,6 +4,7 @@
 
 version xxxxxxxx:
  - added PDF support,
+ - invalid language metada are ignored,
  - ...
 
 version 20151212:
