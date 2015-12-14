@@ -3,7 +3,7 @@
 
 
 version xxxxxxxx:
- - added experimental PDF support,
+ - added PDF support,
  - ...
 
 version 20151212:

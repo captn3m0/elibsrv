@@ -24,9 +24,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#include "crc32.h"
 #include "libsql.h"
 #include "libgetconf.h"
-#include "crc32.h"
+#include "pdfmeta.h"
 
 
 enum EBOOKFORMATS {
@@ -324,18 +326,14 @@ int main(int argc, char **argv) {
       moddate = get_epub_single_data(epubfile, EPUB_DATE, NULL, modfilter);
       epub_close(epubfile);
     } else if (format == FORMAT_PDF) { /* PDF */
-      char *bname;
-      /* TODO primitive title = filename.. shall be replaced by proper metadata reading */
-      bname = strrchr(ebookfilename, '/');
-      if (bname == NULL) {
-        bname = ebookfilename;
-      } else {
-        bname += 1;
+      struct pdfmeta *pdf;
+      pdf = pdfmeta_get(ebookfilename);
+      if (pdf != NULL) {
+        if (pdf->title != NULL) title = strdup(pdf->title);
+        if (pdf->author != NULL) author = strdup(pdf->author);
+        if (pdf->subject != NULL) desc = strdup(pdf->subject);
+        pdfmeta_free(pdf);
       }
-      title = strdup(bname);
-      /* trim the file extension */
-      bname = strrchr(title, '.');
-      if (bname != NULL) *bname = 0;
     }
 
     if (verbosemode != 0) {

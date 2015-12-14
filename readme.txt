@@ -23,6 +23,7 @@ elibsrv can be installed on a Linux or BSD server.
 elibsrv requires some bits to be present on your server:
  - libpq5 (used by the indexing process to populate the PostgreSQL database)
  - libepub (used by the indexing process to extract metadata from EPUB files)
+ - libpoppler-cpp (for PDF metadata extraction)
  - an access to a PostgreSQL database
  - a web server with PHP5 and:
    - the PHP GD extension
