@@ -39,6 +39,7 @@
  *     $meta['moddate']   - date and time when the ebook has been last modified
  *     $meta['crc']       - CRC32 sum of the ebook file
  *     $meta['aqlink']    - acquisition link (can be used to fetch the actual ebook file)
+ *     $meta['aqlinkmobi']- acquisition link to the mobi version of the file (if any)
  *     $meta['coverlink'] - cover link (can be used to fetch the ebook's cover image)
  *     $meta['thumblink'] - thumbnail link (can be used to fetch a thumbnail image of the cover)
  *     $meta['filename']  - the local filename of the ebook file

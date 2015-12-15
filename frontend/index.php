@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20151213";
+$pver = "20151215";
 
 
 // include output plugins
@@ -110,7 +110,10 @@ function getDefaultOutformat() {
   if (preg_match("/^.* Chrome\/.*$/", $ua) == 1) return("html");
 
   // detect Opera
-  if (preg_match("/^.* Opera\/$/", $ua) == 1) return("html");
+  if (preg_match("/^.* Opera\/.*$/", $ua) == 1) return("html");
+
+  // Detect Safari (as used by the kindle browser)
+  if (preg_match("/^.* Safari\/.*$/", $ua) == 1) return("html");
 
   // for anything else, assume it's an opds reader
   return("atom");
@@ -207,7 +210,7 @@ function printnaventry($outformat, $title, $urlparams, $iconfile) {
 }
 
 
-function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format) {
+function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format, $kindlegenbin) {
   // prepare the array with metadata
   $meta = array();
   $meta['title'] = $title;
@@ -224,9 +227,12 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
   $meta['format'] = $format;
   if ($prettyurls == 1) { // the epub link can have different forms, depending on the "pretty URLs" setting
     $meta['aqlink'] = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . '.' . $format;
+    $meta['aqlinkmobi'] =  "files/{$crc32}/" . rawurlencode($author . " - " . $title) . '.mobi';
   } else {
     $meta['aqlink'] = $_SERVER['PHP_SELF'] . "?action=getfile&amp;query=" . $crc32;
+    $meta['aqlinkmobi'] = $_SERVER['PHP_SELF'] . "?action=getmobi&amp;query=" . $crc32;
   }
+  if ((empty($kindlegenbin)) || ($format != 'epub')) $meta['aqlinkmobi'] = NULL; // drop the mobi link if no kindlegenbin path is configured, or source file is not epub
   $meta['coverlink'] = $_SERVER['PHP_SELF'] . "?action=getcover&amp;query={$crc32}";
   $meta['thumblink'] = $_SERVER['PHP_SELF'] . "?action=getthumb&amp;query={$crc32}";
 
@@ -268,7 +274,7 @@ function mainindex($outformat, $title) {
 }
 
 
-function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls) {
+function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls, $kindlegenbin) {
   $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, moddate, file, filesize, format';
   printheaders($outformat, "titlesindex", "Titles");
 
@@ -306,7 +312,7 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $filesize = $myrow['filesize'];
     $filename = $myrow['file'];
     $format = sqlformat2human($myrow['format']);
-    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format);
+    printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format, $kindlegenbin);
   }
   pg_free_result($result);
 
@@ -404,6 +410,7 @@ if (empty($thumbheight) || $thumbheight < 1) $thumbheight = 160;
 $title = getconf($params, 'title');
 if (empty($title)) $title = "Main menu";
 $thumbdir = getconf($params, 'thumbdir');
+$kindlegenbin = getconf($params, 'kindlegenbin');
 
 $action = "";
 $query = "";
@@ -444,6 +451,30 @@ if ($action == "getfile") {
     if ($localfile['format'] == 'pdf') header('content-type: application/pdf');
     readfile($localfile['filename']);
   }
+} else if ($action == "getmobi") {
+  if (empty($kindlegenbin)) {
+    header('content-type: text/html');
+    echo "<html><head></head><body>mobi conversion not available, because kindlegenbin not set.</body></html>\n";
+  } else {
+    $localfile = getLocalFilename($db, $query);
+    if ($localfile != NULL) {
+      // build the filename of the mobi file
+      $localfilemobi = pathinfo($localfile['filename'], PATHINFO_DIRNAME) . '/' . pathinfo($localfile['filename'], PATHINFO_FILENAME) . '.mobi';
+      // if doesn't exist yet, convert it using the kindlegen binary
+      if (! file_exists($localfilemobi)) {
+        exec($kindlegenbin . ' ' . $localfile['filename']);
+      }
+      // if file still doesn't exist, then something went wrong
+      if (! file_exists($localfilemobi)) {
+        header('content-type: text/html');
+        echo "<html><head></head><body>ERROR: mobi conversion failed. please check your kindlegenbin setting.<br>{$kindlegenbin} {$localfile['filename']}</body></html>\n";
+      } else {
+        // finally, return the mobi file
+        header('content-type: application/x-mobipocket-ebook');
+        readfile($localfilemobi);
+      }
+    }
+  }
 } else if ($action == "getthumb") {
   $coverinzip = dirname(__FILE__) . "/images/nocover.png";
   $localfile = getLocalFilename($db, $query);
@@ -456,7 +487,7 @@ if ($action == "getfile") {
     }
   }
   /* return the cover file */
-  returnImageThumbnail($coverinzip, 120, $cachethumb);
+  returnImageThumbnail($coverinzip, $thumbheight, computeThumbCacheFilename($thumbdir, $query));
 } else if ($action == "getcover") {
   $coverinzip = dirname(__FILE__) . "/images/nocover.png";
   $localfile = getLocalFilename($db, $query);
@@ -472,9 +503,9 @@ if ($action == "getfile") {
   header("content-type: " . image_type_to_mime_type(exif_imagetype($coverinzip)));
   readfile($coverinzip);
 } else if ($action == "titles") {
-  titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, 0, 0, $query, $prettyurls);
+  titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, 0, 0, $query, $prettyurls, $kindlegenbin);
 } else if ($action == "latest") {
-  titlesindex($outformat, $db, NULL, NULL, NULL, 0, $latestdays, NULL, $prettyurls);
+  titlesindex($outformat, $db, NULL, NULL, NULL, 0, $latestdays, NULL, $prettyurls, $kindlegenbin);
 } else if ($action == "authors") {
   authorsindex($outformat, $db);
 } else if ($action == "langs") {
@@ -482,7 +513,7 @@ if ($action == "getfile") {
 } else if ($action == "tags") {
   tagsindex($outformat, $db);
 } else if ($action == "rand") {
-  titlesindex($outformat, $db, NULL, NULL, NULL, 1, 0, NULL, $prettyurls);
+  titlesindex($outformat, $db, NULL, NULL, NULL, 1, 0, NULL, $prettyurls, $kindlegenbin);
 } else if ($action == "searchform") {
   searchform($outformat);
 } else {

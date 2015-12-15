@@ -11,7 +11,7 @@ homepage: http://elibsrv.sourceforge.net
 
 [ Intro ]
 
-elibsrv is a virtual library for ebook files. In more techy terms, it's a light ePub and PDF indexing engine providing an OPDS and HTML interface. If you have plenty of ePub and/or PDF files and would like to access them remotely via an organized interface, either using your web browser or OPDS-compatible device, elibsrv could be an excellent fit.
+elibsrv is a virtual library for ebook files. In more techy terms, it's a light ePub and PDF indexing engine providing an OPDS and HTML interface. If you have plenty of ePub and/or PDF files and would like to access them remotely via an organized interface, either using your web browser or OPDS-compatible device, elibsrv could be an excellent fit. It is also compatible with Kindle devices, allowing for on-the-fly conversion to *.mobi, when configured with the kindlegen plugin.
 
 elibsrv is based on three blocks: the indexing process (ran periodically, eg. via a crontab entry), the PHP frontend (outputting OPDS or HTML listings), and a PostgreSQL database used to store the indexed metadata.
 
@@ -25,6 +25,7 @@ elibsrv requires some bits to be present on your server:
  - libepub (used by the indexing process to extract metadata from EPUB files)
  - libpoppler-cpp (for PDF metadata extraction)
  - an access to a PostgreSQL database
+ - the 'kindlegen' binary from Kindle, if mobi conversion is required
  - a web server with PHP5 and:
    - the PHP GD extension
    - the PHP postgresql extension

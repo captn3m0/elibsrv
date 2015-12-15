@@ -39,6 +39,7 @@
  *     $meta['moddate']   - date and time when the ebook has been last modified
  *     $meta['crc']       - CRC32 sum of the ebook file
  *     $meta['aqlink']    - acquisition link (can be used to fetch the actual ebook file)
+ *     $meta['aqlinkmobi']- acquisition link to the mobi version of the file (if any)
  *     $meta['coverlink'] - cover link (can be used to fetch the ebook's cover image)
  *     $meta['thumblink'] - thumbnail link (can be used to fetch a thumbnail image of the cover)
  *     $meta['filename']  - the local filename of the ebook file
@@ -91,11 +92,16 @@ function printnaventry_html(array $nav) {
 
 function printaqentry_html(array $meta) {
   echo '  <p class="acqimg"><a href="' . $meta['coverlink'] . '"><img src="' . $meta['thumblink'] . '" class="acqlink"></a></p>' . "\n";
-  echo '  <p class="acqlink"><a href="' . $meta['aqlink'] . '">' . htmlentities($meta['title']) . '</a><span class="author">';
-
-  if (!empty($meta['lang'])) echo htmlentities(' (' . $meta['lang'] . ')');
-  echo "<br>\n";
-
+  echo '  <p class="acqlink">' . htmlentities($meta['title']);
+  // lang
+  if (!empty($meta['lang'])) {
+    echo ' <span class="author">' . htmlentities('(' . $meta['lang'] . ')') . '</span>';
+  }
+  // links
+  echo ' <a href="' . $meta['aqlink'] . '">[' . strtoupper($meta['format']) . ']</a>';
+  if (!empty($meta['aqlinkmobi'])) echo ' <a href="' . $meta['aqlinkmobi'] . '">[MOBI]</a>';
+  // author
+  echo '<br><span class="author">';
   if (! empty($meta['author'])) {
     echo htmlentities($meta['author']);
   } else {

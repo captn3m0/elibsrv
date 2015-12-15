@@ -5,6 +5,8 @@
 version xxxxxxxx:
  - added PDF support,
  - invalid language metada are ignored,
+ - safari browsers get the html view by default (as used by Kindle),
+ - html output optimized for small screens,
  - ...
 
 version 20151212:
