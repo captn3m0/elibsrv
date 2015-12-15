@@ -61,7 +61,7 @@ function printheaders_html(array $pageinfo) {
   echo "  <title>" . htmlentities($pageinfo['title']) . "</title>\n";
   echo '  <link rel="shortcut icon" href="favicon.png">' . "\n";
   echo "  <style>\n";
-  echo '    body { font-family: "Open Sans", "Helvetica", sans-serif; }' . "\n";
+  echo '    body { font-family: "Open Sans", "Helvetica", sans-serif; min-width: 20em;}' . "\n";
   echo "    p { padding: 0 1em 0 1em; margin: 0.1em 0 0.1em 0; }\n";
   echo "    p.menutitle { background-color: #fdc; font-weight: bold; margin-bottom: 0.9em; }\n";
   echo "    p.acqimg { margin: 0.5em 0 0 0; padding: 0; }\n";
