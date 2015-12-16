@@ -7,6 +7,8 @@ version xxxxxxxx:
  - invalid language metada are ignored,
  - safari browsers get the html view by default (as used by Kindle),
  - html output optimized for small screens,
+ - added support for kindlegen to convert ePubs to MOBI files on the fly,
+ - web frontend detects missing libraries instead of returning a blank page,
  - ...
 
 version 20151212:

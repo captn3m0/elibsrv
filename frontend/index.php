@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20151215";
+$pver = "20151216";
 
 
 // include output plugins
@@ -385,6 +385,17 @@ function searchform($outformat) {
 function computeThumbCacheFilename($thumbdir, $crc32) {
   if (! empty($thumbdir)) return($thumbdir . '/elibsrv-thumbcache-' . $crc32);
   return('');
+}
+
+
+// first of all, check that all dependencies are met
+if (!function_exists('gd_info')) {
+  echo "Error: PHP GD library not installed";
+  exit(1);
+}
+if (!function_exists('pg_connect')) {
+  echo "Error: PHP PostgreSQL library not installed";
+  exit(1);
 }
 
 
