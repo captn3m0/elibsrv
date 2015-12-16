@@ -352,7 +352,7 @@ int main(int argc, char **argv) {
     /* validate the lang */
     if (validlang(lang) != 0) {
       free(lang);
-      lang = strdup("unknown");
+      lang = NULL;
     }
 
     if (verbosemode != 0) {
