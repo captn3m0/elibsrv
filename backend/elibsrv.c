@@ -56,7 +56,7 @@ static int getformat(char *filename) {
 
 
 /* strips the 'type' and 'comment' parts of an epub entry, if any. example:
- * creator: Jules Vernes (auhtor)   ->   Jules Vernes */
+ * creator: Jules Vernes (author)  ->  Jules Vernes */
 static void striptype(char *dst, char *src) {
   char *s;
   s = strstr((char *) src, ": ");
@@ -140,7 +140,7 @@ static char *get_epub_single_data(struct epub *epub, int type, char *ifempty, ch
     if (ifempty != NULL) {
       singleres = strdup(ifempty);
     } else {
-      singleres = strdup(" ");
+      singleres = strdup("");
     }
   }
   if (res != NULL) {
