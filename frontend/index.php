@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20151216";
+$pver = "20151217";
 
 
 // include output plugins
@@ -282,7 +282,11 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $sqlauthorfilter = pg_escape_string($db, $authorfilter);
     $query = "SELECT {$fieldslist} FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
   } else if (! empty($langfilter)) {
-    $sqllangfilter = pg_escape_string($db, $langfilter);
+    if (strlen($langfilter) > 2) {
+      $sqllangfilter = ''; // non-2 letter 'language' is 'unknown'
+    } else {
+      $sqllangfilter = pg_escape_string($db, $langfilter);
+    }
     $query = "SELECT {$fieldslist} FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
   } else if (! empty($tagfilter)) {
     $sqltagfilter = pg_escape_string($db, $tagfilter);
@@ -339,11 +343,11 @@ function authorsindex($outformat, $db) {
 function langsindex($outformat, $db) {
   printheaders($outformat, "langsindex", "Languages");
 
-  $query = "SELECT language FROM books WHERE language != '' GROUP BY language ORDER BY language;";
+  $query = "SELECT (CASE WHEN language = '' THEN 'unknown' ELSE language END) AS lang FROM books GROUP BY lang ORDER BY lang;";
   $result = pg_query($query);
 
   while ($myrow = pg_fetch_assoc($result)) {
-    $language = strip_tags($myrow['language']);
+    $language = strip_tags($myrow['lang']);
     printnaventry($outformat, $language, "action=titles&amp;l=" . urlencode($language), getLangIcon($language));
   }
   pg_free_result($result);
