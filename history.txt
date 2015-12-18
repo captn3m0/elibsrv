@@ -9,6 +9,7 @@ version xxxxxxxx:
  - html output optimized for small screens,
  - added support for kindlegen to convert ePubs to MOBI files on the fly,
  - web frontend detects missing libraries instead of returning a blank page,
+ - optimized the html frontend for small screens,
  - ...
 
 version 20151212:
