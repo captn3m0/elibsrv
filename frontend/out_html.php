@@ -62,25 +62,25 @@ function printheaders_html(array $pageinfo) {
   echo "  <title>" . htmlentities($pageinfo['title']) . "</title>\n";
   echo '  <link rel="shortcut icon" href="favicon.png">' . "\n";
   echo '  <meta name="viewport" content="width=device-width">' . "\n";
+  echo '  <meta charset="utf-8">' . "\n";
   echo "  <style>\n";
   echo '    body { font-family: "Open Sans", "Helvetica", sans-serif; min-width: 0; }' . "\n";
   echo "    p { padding: 0 1em 0 1em; margin: 0.1em 0 0.1em 0; }\n";
+  echo '    p.homesearch { border-bottom: 2px #ddd solid; padding-bottom: 1em; margin-bottom: 1em; }'. "\n";
   echo "    p.menutitle { background-color: #fdc; font-weight: bold; margin-bottom: 0.9em; }\n";
   echo "    p.acqimg { margin: 0.5em 0 0 0; padding: 0; }\n";
-  echo "    p.acqlink { margin: -2.75em auto 1.2em 2em; }\n";
-  echo "    p.trailer { margin: 1.5em 0 0 0; text-align: right; padding: 1px 0.5em 1px 0.5em; font-size: 0.8em; }\n";
-  echo "    a.trailer { color: #666; text-decoration: none; }\n";
-  echo "    img.acqlink { vertical-align: middle; height: 3em; max-width: 2.9em; border: 1px #888 solid; }\n";
+  echo "    p.acqlink { margin: -3.25em auto 1em 2.5em; }\n";
+  echo "    p.trailer { margin: 1em 0 0 0; text-align: right; padding: 0 0.5em 0 0.5em; font-size: 0.8em; border-top: 2px #ddd solid; color: #777; }\n";
+  echo "    a.trailer { color: inherit; text-decoration: none; }\n";
+  echo "    img.acqlink { vertical-align: middle; height: 3.5em; max-width: 3.4em; border: 1px #888 solid; }\n";
   echo "    a { text-decoration: none; color: #008; }\n";
-  echo "    hr { margin: 0.9em 0 0.9em 0; color: #ddd; }\n";
   echo "    span.author { color: #707070; }\n";
   echo "  </style>\n";
   echo "</head>\n";
   echo "<body>\n";
-  echo "  <p class=\"menutitle\">" . htmlentities($pageinfo['title']) . "</p>\n";
+  echo '  <p class="menutitle">' . htmlentities($pageinfo['title']) . "</p>\n";
   // build the menu bar
-  echo '  <p><form name="input" action="' . $pageinfo['self'] . '" method="get"><a href="' . $pageinfo['self'] . '?f=html">Home</a> <input type="text" name="query"><input type="hidden" name="action" value="titles"><input type="hidden" name="f" value="html"><input type="submit" value="search"></form></p>' . "\n";
-  echo "  <hr>\n";
+  echo '  <form name="input" action="' . $pageinfo['self'] . '" method="get"><p class="homesearch"><a href="' . $pageinfo['self'] . '?f=html">Home</a> <input type="text" name="query"><input type="hidden" name="action" value="titles"><input type="hidden" name="f" value="html"><input type="submit" value="search"></p></form>' . "\n";
 }
 
 
@@ -113,7 +113,7 @@ function printaqentry_html(array $meta) {
 
 
 function printtrailer_html(array $info) {
-  echo '  <p class="trailer"><a href="' . $info['homepage'] . '" class="trailer">elibsrv frontend version ' . $info['version'] . '</a></p>' . "\n";
+  echo '  <p class="trailer"><a href="' . $info['homepage'] . '" class="trailer">elibsrv version ' . $info['version'] . '</a></p>' . "\n";
   echo "</body>\n";
   echo "</html>\n";
 }
