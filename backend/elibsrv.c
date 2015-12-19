@@ -268,13 +268,12 @@ int main(int argc, char **argv) {
   }
 
   libsql_sendreq("SET client_min_messages TO WARNING;"); /* this required to shut up the damn thing from outputing messages about implicit index creation during a CREATE TEMP TABLE... */
-  libsql_sendreq("BEGIN;");
-  libsql_sendreq("CREATE TEMP TABLE tempbooks (crc32 BIGINT NOT NULL PRIMARY KEY, modtime TIMESTAMP WITHOUT TIME ZONE NOT NULL);");
-  libsql_sendreq("INSERT INTO tempbooks (crc32, modtime) SELECT crc32, modtime FROM books;");
-  libsql_sendreq("DELETE FROM tags;");
-  libsql_sendreq("DELETE FROM books;"); /* I could use TRUNCATE here for much better performances, but the problem with TRUNCATE is that it takes an exclusive lock on the table, so the system would become unavailable during indexation time */
+  libsql_sendreq("CREATE TEMP TABLE tempbooks (crc32 BIGINT NOT NULL PRIMARY KEY, file VARCHAR NOT NULL, present SMALLINT NOT NULL DEFAULT 0);");
+  libsql_sendreq("INSERT INTO tempbooks (crc32, file) SELECT crc32, file FROM books;");
   for (;;) {
     long fsize;
+    int present;
+    char *presentfile;
 
     /* fetch the filename to process from stdin */
     if (fgets(ebookfilename, FILENAMELEN, stdin) == NULL) break;
@@ -290,18 +289,37 @@ int main(int argc, char **argv) {
     }
 
     /* First of all, check if the file is not already in db */
-    snprintf(sqlbuf, SQLBUFLEN, "SELECT file FROM books WHERE crc32=%lu;", crc32);
+    snprintf(sqlbuf, SQLBUFLEN, "SELECT file,present FROM tempbooks WHERE crc32=%lu;", crc32);
     if (libsql_sendreq(sqlbuf) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
-      libsql_sendreq("ROLLBACK;");
       break;
     }
-    if (libsql_nextresult() == 0) { /* file already exists in db */
-      fprintf(stderr, "WARNING: file '%s' is an exact copy of '%s'. The former won't be indexed.\n", ebookfilename, libsql_getresult(0));
-      libsql_freeresult();
-      continue;
+    present = -1;
+    presentfile = NULL;
+    if (libsql_nextresult() == 0) {
+      present = atoi(libsql_getresult(1));
+      presentfile = strdup(libsql_getresult(0));
     }
     libsql_freeresult();
+
+    if (present > 0) { /* file already exists in db */
+      fprintf(stderr, "WARNING: file '%s' is an exact copy of '%s'. The former won't be indexed.\n", ebookfilename, presentfile);
+      free(presentfile);
+      continue;
+    } else if (present == 0) { /* file was already existing, simply mark it as found, and update the filename if needed */
+      sqlepubfilename = libsql_escape_string(ebookfilename);
+      snprintf(sqlbuf, SQLBUFLEN, "UPDATE tempbooks SET present=1,file=%s WHERE crc32=%lu;", sqlepubfilename, crc32);
+      libsql_sendreq(sqlbuf);
+      if (strcmp(ebookfilename, presentfile) != 0) {
+        snprintf(sqlbuf, SQLBUFLEN, "UPDATE books SET file=%s WHERE crc32=%lu;", sqlepubfilename, crc32);
+        libsql_sendreq(sqlbuf);
+      }
+      free(sqlepubfilename);
+      free(presentfile);
+      continue;
+    }
+
+    /* if I'm here, it means this is a completely NEW file */
 
     /* what format is it? */
     format = getformat(ebookfilename);
@@ -387,11 +405,14 @@ int main(int argc, char **argv) {
     free(pubdate);
     free(moddate);
 
-    /* Insert the value into SQL */
-    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,format,file,author,title,language,description,modtime,publisher,pubdate,moddate,filesize) VALUES (%lu,%d,%s,%s,%s,lower(%s),%s,(SELECT COALESCE((SELECT modtime FROM tempbooks WHERE crc32=%lu), NOW())),%s,%s,%s,%ld);", crc32, format, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, crc32, sqlpublisher, sqlpubdate, sqlmoddate, fsize);
+    /* add the file to the tempbook table */
+    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO tempbooks (crc32,file,present) VALUES (%lu,%s,1);", crc32, sqlepubfilename);
+    libsql_sendreq(sqlbuf);
+
+    /* Insert the meta values into SQL */
+    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,format,file,author,title,language,description,modtime,publisher,pubdate,moddate,filesize) VALUES (%lu,%d,%s,%s,%s,lower(%s),%s,NOW(),%s,%s,%s,%ld);", crc32, format, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, sqlpublisher, sqlpubdate, sqlmoddate, fsize);
     if (libsql_sendreq(sqlbuf) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
-      libsql_sendreq("ROLLBACK;");
       break;
     }
 
@@ -414,7 +435,6 @@ int main(int argc, char **argv) {
         snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO tags (book,tag) VALUES (%lu,lower(%s));", crc32, sqltag);
         if (libsql_sendreq(sqlbuf) != 0) {
           fprintf(stderr, "SQL ERROR when trying this / please check your SQL logs: %s\n", sqlbuf);
-          libsql_sendreq("ROLLBACK;");
           break;
         }
         free(sqltag);
@@ -422,10 +442,13 @@ int main(int argc, char **argv) {
       free(tags[i]);
     }
     free(tags);
-
   }
+
+  /* remove all ebooks that are no longer present on disk (along with their tags) */
+  libsql_sendreq("DELETE FROM tags WHERE book IN (SELECT crc32 FROM tempbooks WHERE present=0);");
+  libsql_sendreq("DELETE FROM books WHERE crc32 IN (SELECT crc32 FROM tempbooks WHERE present=0);");
+
   libsql_sendreq("DROP TABLE tempbooks;"); /* not really necessary for a TEMP table, but let's do it anyway just for completness */
-  libsql_sendreq("COMMIT;");
   epub_cleanup();
   free(sqlbuf);
   libsql_disconnect(); /* disconnect from the sql db */
