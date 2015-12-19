@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20151218";
+$pver = "20151220";
 
 
 // include output plugins
@@ -294,7 +294,7 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
   } else if ($randflag != 0) {
     $query = "SELECT {$fieldslist} FROM books ORDER BY random() LIMIT 5;";
   } else if ($latest > 0) {
-    $query = "SELECT {$fieldslist} FROM books WHERE modtime > NOW() - INTERVAL '{$latest} DAYS' ORDER BY modtime DESC, title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books ORDER BY modtime DESC, title, author, language LIMIT 15;";
   } else if (! empty($search)) {
     $sqlsearch = pg_escape_string($db, $search);
     $query = "SELECT {$fieldslist} FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";

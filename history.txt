@@ -2,7 +2,7 @@
 *** elibsrv changelog ***
 
 
-version xxxxxxxx:
+version 20151220:
  - added PDF support,
  - invalid language metada are ignored,
  - safari browsers get the html view by default (as used by Kindle),
@@ -10,8 +10,7 @@ version xxxxxxxx:
  - added support for kindlegen to convert ePubs to MOBI files on the fly,
  - web frontend detects missing libraries instead of returning a blank page,
  - optimized the html frontend for small screens,
- - boosted library scanning performances by 200% (only changes are synced),
- - ...
+ - boosted library scanning performances by 200% (only changes are synced).
 
 version 20151212:
  - added publisher and publishing date to the OPDS output,
