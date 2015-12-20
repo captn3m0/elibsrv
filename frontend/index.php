@@ -476,13 +476,14 @@ if ($action == "getfile") {
       // build the filename of the mobi file
       $localfilemobi = pathinfo($localfile['filename'], PATHINFO_DIRNAME) . '/' . pathinfo($localfile['filename'], PATHINFO_FILENAME) . '.mobi';
       // if doesn't exist yet, convert it using the kindlegen binary
+      $kindleconvertcmd = $kindlegenbin . ' \'' . $localfile['filename'] . '\'';
       if (! file_exists($localfilemobi)) {
-        exec($kindlegenbin . ' ' . $localfile['filename']);
+        $execres = exec($kindleconvertcmd);
       }
       // if file still doesn't exist, then something went wrong
       if (! file_exists($localfilemobi)) {
         header('content-type: text/html');
-        echo "<html><head></head><body>ERROR: mobi conversion failed. please check your kindlegenbin setting.<br>{$kindlegenbin} {$localfile['filename']}</body></html>\n";
+        echo "<html><head></head><body>ERROR: mobi conversion failed. please check your kindlegenbin setting.<br>{$kindleconvertcmd}<br><br><pre>{$execres}</pre></body></html>\n";
       } else {
         // finally, return the mobi file
         header('content-type: application/x-mobipocket-ebook');
