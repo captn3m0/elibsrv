@@ -57,6 +57,11 @@ Since now on, you should be able to access your library via one of the following
   HTML: http://yourwebserver/?f=html
 
 
+[ Kindle compatibility ]
+
+elibsrv is primarily an ePub agregator. Sadly, the Kindle reader is not compatible with the ePub standard, and supports only its own (closed and obscure) "mobi" format instead. If you are the owner of a Kindle device, fear not - you still can use elibsrv. Since v20151220, elibsrv supports automatic ("on the fly") conversion of ePub files to the MOBI standard using a free converter tool from Amazon, called "kindlegen". This requires to set the "kindlegenbin" elibsrv configuration setting with the full path to the kindlegen binary (you will have to find the kindlegen binary on your own though, since several versions exist for different operating systems, and I'm not authorized to redistribute them anyway). Once this is done, elibsrv will propose both 'EPUB' and 'MOBI' download links for each book. When a MOBI download is requested, elibsrv looks whether the exact same ebook filename exists, but with the '*.mobi' extension - if so, it returns it. If not, it calls the kindlegen tool to convert it first, and then returns the mobi results. Note, that you could just as well replace kindlegen with some equivalent, as long as it understands the same syntax "tool full-path-filename.epub", and computes a mobi file in the same directory where the original ePub file is.
+
+
 [ License ]
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
