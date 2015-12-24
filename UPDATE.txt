@@ -1,3 +1,0 @@
-*** elibsrv UPDATE NOTE ***
-
-If you are updating elibsrv from an earlier version, then please make sure to update the SQL schema of the elibsrv database by executing the elibsrv.sql file on your postgresql db.

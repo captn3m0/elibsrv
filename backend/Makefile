@@ -1,10 +1,13 @@
-CFLAGS = -std=gnu89 -Wall -Wextra -pedantic -Wno-long-long -Wformat-security -I/usr/include/postgresql -I/usr/include/pgsql
-CLIBS = -lepub -lpq -lpoppler-cpp -lstdc++
+CFLAGS = -std=gnu89 -Wall -Wextra -pedantic -Wno-long-long -Wformat-security
+CLIBS = -lepub -lsqlite3 -lpoppler-cpp -lstdc++
 
 all: elibsrv
 
 elibsrv: crc32.o libsql.o libgetconf.o elibsrv.o pdfmeta.o
 	gcc crc32.o libsql.o libgetconf.o elibsrv.o pdfmeta.o -o elibsrv $(CLIBS) $(CFLAGS)
+
+testdb: testdb.o libsql.o
+	gcc testdb.o libsql.o -o testdb $(CLIBS) $(CFLAGS)
 
 elibsrv.o: elibsrv.c
 	gcc -c elibsrv.c -o elibsrv.o $(CFLAGS)
@@ -22,4 +25,4 @@ crc32.o: crc32.c
 	gcc -c crc32.c -o crc32.o $(CFLAGS)
 
 clean:
-	rm -f *.o elibsrv
+	rm -f *.o elibsrv testdb

@@ -2,6 +2,9 @@
 *** elibsrv changelog ***
 
 
+version xxx:
+ - migrated the db backend from PostgreSQL to SQLite.
+
 version 20151220:
  - added PDF support,
  - invalid language metada are ignored,

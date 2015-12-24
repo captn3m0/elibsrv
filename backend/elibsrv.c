@@ -109,9 +109,11 @@ static char **get_epub_data(struct epub *epub, int type, int maxepubentries, cha
       if ((type == EPUB_CREATOR) || (type = EPUB_DATE)) {
         striptype(buff, (char *)meta[i]);
       }
-      /* if result is not empty, save it */
+      /* if result is not empty, save it (and ltrim at the same occasion) */
       if (buff[0] != 0) {
-        result[rescount++] = strdup(buff);
+        int firstchar = 0;
+        while (buff[firstchar] == ' ' || buff[firstchar] == '\t') firstchar++;
+        result[rescount++] = strdup(buff + firstchar);
       }
       free(buff);
       if (rescount >= maxepubentries) break;
@@ -220,17 +222,27 @@ int main(int argc, char **argv) {
   char ebookfilename[FILENAMELEN];
   char *sqlepubfilename;
   unsigned long crc32;
-  char *dbaddr;
-  char *dbname;
-  char *dbuser;
-  char *dbpass;
+  char *dbfile;
   int i;
   int format; /* 0 = epub ; 1 = pdf */
   char *configfile;
 
+  /* SQL schema */
+  char *sqlschema[] = {
+    "CREATE TABLE IF NOT EXISTS books (crc32 INTEGER PRIMARY KEY, file TEXT NOT NULL UNIQUE, format INTEGER NOT NULL, author TEXT NOT NULL, title TEXT NOT NULL, language TEXT NOT NULL, description TEXT NOT NULL, publisher TEXT NOT NULL, pubdate TEXT NOT NULL, moddate TEXT NOT NULL, filesize INTEGER NOT NULL, modtime INTEGER NOT NULL);",
+    "CREATE INDEX IF NOT EXISTS books_author_idx ON books(author);",
+    "CREATE INDEX IF NOT EXISTS books_title_idx ON books(title);",
+    "CREATE INDEX IF NOT EXISTS books_language_idx ON books(language);",
+    "CREATE INDEX IF NOT EXISTS books_modtime_idx ON books(modtime);",
+    "CREATE TABLE IF NOT EXISTS tags (book INTEGER NOT NULL, tag TEXT NOT NULL, FOREIGN KEY(book) REFERENCES books(crc32));",
+    "CREATE INDEX IF NOT EXISTS tags_book_idx ON tags(book);",
+    "CREATE INDEX IF NOT EXISTS tags_book_tag ON tags(tag);",
+    "CREATE TEMP TABLE tempbooks (crc32 INTEGER PRIMARY KEY, file TEXT NOT NULL UNIQUE, present INTEGER NOT NULL);",
+    NULL };
+
   /* elibsrv must be called with exactly one parameter, and the parameter can't be empty or start with a dash */
   if ((argc < 2) || (argc > 3) || (argv[1][0] == '-') || (argv[1][0] == 0)) {
-    puts("Usage: find /pathtoepubs/ -name *.epub | elibsrv /etc/elibsrv.conf [-v]");
+    puts("Usage example: find /pathtoepubs/ -iname *\\.epub | elibsrv /etc/elibsrv.conf [-v]");
     return(1);
   }
 
@@ -252,24 +264,35 @@ int main(int argc, char **argv) {
   } else if (verbosemode != 0) {
     printf("Loaded configuration file at %s\n", configfile);
   }
-  dbaddr = getconf_findvalue(NULL, "dbaddr");
-  dbname = getconf_findvalue(NULL, "dbname");
-  dbuser = getconf_findvalue(NULL, "dbuser");
-  dbpass = getconf_findvalue(NULL, "dbpass");
+  dbfile = getconf_findvalue(NULL, "dbfile");
+  if ((dbfile == NULL) || (*dbfile == 0)) {
+    fprintf(stderr, "Error: no dbfile set in config file\n");
+    return(1);
+  }
 
   sqlbuf = malloc(SQLBUFLEN);
 
   /* connect to the sql db */
-  if (libsql_connect(dbaddr, 5432, dbname, dbuser, dbpass) != 0) {
-    fprintf(stderr, "Error: failed to connect to the sql database '%s' on host %s (defined in %s).\n", dbname, dbaddr, configfile);
+  if (libsql_connect(dbfile) != 0) {
+    fprintf(stderr, "Error: failed to connect to the sql database '%s' (defined in %s).\n", dbfile, configfile);
     return(1);
   } else if (verbosemode != 0) {
-    printf("Connected to db '%s' on host '%s'\n", dbname, dbaddr);
+    printf("Connected to db '%s'\n", dbfile);
   }
 
-  libsql_sendreq("SET client_min_messages TO WARNING;"); /* this required to shut up the damn thing from outputing messages about implicit index creation during a CREATE TEMP TABLE... */
-  libsql_sendreq("CREATE TEMP TABLE tempbooks (crc32 BIGINT NOT NULL PRIMARY KEY, file VARCHAR NOT NULL, present SMALLINT NOT NULL DEFAULT 0);");
-  libsql_sendreq("INSERT INTO tempbooks (crc32, file) SELECT crc32, file FROM books;");
+  /* SQL schema refresh */
+  for (i = 0; sqlschema[i] != NULL; i++) {
+    if (libsql_sendreq(sqlschema[i], 1) != 0) {
+      fprintf(stderr, "Error: failed to init SQL schema\n");
+      return(1);
+    }
+  }
+
+  /* copy all CRCs into the temp table */
+  if (libsql_sendreq("INSERT INTO tempbooks (crc32,file,present) SELECT crc32,file,0 FROM books;", 1) != 0) {
+    fprintf(stderr, "Error: unexpected SQL failure\n");
+    return(1);
+  }
   for (;;) {
     long fsize;
     int present;
@@ -290,7 +313,7 @@ int main(int argc, char **argv) {
 
     /* First of all, check if the file is not already in db */
     snprintf(sqlbuf, SQLBUFLEN, "SELECT file,present FROM tempbooks WHERE crc32=%lu;", crc32);
-    if (libsql_sendreq(sqlbuf) != 0) {
+    if (libsql_sendreq(sqlbuf, 0) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
       break;
     }
@@ -309,10 +332,10 @@ int main(int argc, char **argv) {
     } else if (present == 0) { /* file was already existing, simply mark it as found, and update the filename if needed */
       sqlepubfilename = libsql_escape_string(ebookfilename);
       snprintf(sqlbuf, SQLBUFLEN, "UPDATE tempbooks SET present=1,file=%s WHERE crc32=%lu;", sqlepubfilename, crc32);
-      libsql_sendreq(sqlbuf);
+      libsql_sendreq(sqlbuf, 1);
       if (strcmp(ebookfilename, presentfile) != 0) {
         snprintf(sqlbuf, SQLBUFLEN, "UPDATE books SET file=%s WHERE crc32=%lu;", sqlepubfilename, crc32);
-        libsql_sendreq(sqlbuf);
+        libsql_sendreq(sqlbuf, 1);
       }
       free(sqlepubfilename);
       free(presentfile);
@@ -407,11 +430,11 @@ int main(int argc, char **argv) {
 
     /* add the file to the tempbook table */
     snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO tempbooks (crc32,file,present) VALUES (%lu,%s,1);", crc32, sqlepubfilename);
-    libsql_sendreq(sqlbuf);
+    libsql_sendreq(sqlbuf, 1);
 
     /* Insert the meta values into SQL */
-    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,format,file,author,title,language,description,modtime,publisher,pubdate,moddate,filesize) VALUES (%lu,%d,%s,%s,%s,lower(%s),%s,NOW(),%s,%s,%s,%ld);", crc32, format, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, sqlpublisher, sqlpubdate, sqlmoddate, fsize);
-    if (libsql_sendreq(sqlbuf) != 0) {
+    snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,format,file,author,title,language,description,modtime,publisher,pubdate,moddate,filesize) VALUES (%lu,%d,%s,%s,%s,lower(%s),%s,strftime('%%s','now'),%s,%s,%s,%ld);", crc32, format, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, sqlpublisher, sqlpubdate, sqlmoddate, fsize);
+    if (libsql_sendreq(sqlbuf, 1) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
       break;
     }
@@ -433,7 +456,7 @@ int main(int argc, char **argv) {
       if (skip == 0) {
         sqltag = libsql_escape_string(tags[i]);
         snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO tags (book,tag) VALUES (%lu,lower(%s));", crc32, sqltag);
-        if (libsql_sendreq(sqlbuf) != 0) {
+        if (libsql_sendreq(sqlbuf, 1) != 0) {
           fprintf(stderr, "SQL ERROR when trying this / please check your SQL logs: %s\n", sqlbuf);
           break;
         }
@@ -445,10 +468,15 @@ int main(int argc, char **argv) {
   }
 
   /* remove all ebooks that are no longer present on disk (along with their tags) */
-  libsql_sendreq("DELETE FROM tags WHERE book IN (SELECT crc32 FROM tempbooks WHERE present=0);");
-  libsql_sendreq("DELETE FROM books WHERE crc32 IN (SELECT crc32 FROM tempbooks WHERE present=0);");
+  libsql_sendreq("DELETE FROM tags WHERE book IN (SELECT crc32 FROM tempbooks WHERE present=0);", 1);
+  libsql_sendreq("DELETE FROM books WHERE crc32 IN (SELECT crc32 FROM tempbooks WHERE present=0);", 1);
 
-  libsql_sendreq("DROP TABLE tempbooks;"); /* not really necessary for a TEMP table, but let's do it anyway just for completness */
+  /* remove the temporary worker table - not really necessary for a TEMP table, but let's do it anyway just for completness */
+  libsql_sendreq("DROP TABLE tempbooks;", 1);
+
+  /* execute a VACUUM action so the db optimize itself */
+  libsql_sendreq("VACUUM;", 1);
+
   epub_cleanup();
   free(sqlbuf);
   libsql_disconnect(); /* disconnect from the sql db */

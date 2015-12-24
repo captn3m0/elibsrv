@@ -13,44 +13,40 @@ homepage: http://elibsrv.sourceforge.net
 
 elibsrv is a virtual library for ebook files. In more techy terms, it's a light ePub and PDF indexing engine providing an OPDS and HTML interface. If you have plenty of ePub and/or PDF files and would like to access them remotely via an organized interface, either using your web browser or OPDS-compatible device, elibsrv could be an excellent fit. It is also compatible with Kindle devices, allowing for on-the-fly conversion to *.mobi, when configured with the kindlegen plugin.
 
-elibsrv is based on three blocks: the indexing process (ran periodically, eg. via a crontab entry), the PHP frontend (outputting OPDS or HTML listings), and a PostgreSQL database used to store the indexed metadata.
+elibsrv is based on two blocks: the indexing process (ran periodically, eg. via a crontab entry), the PHP frontend (outputting OPDS or HTML listings). elibsrv stores all the indexed metadata in its own SQLite database.
 
-elibsrv can be installed on a Linux or BSD server.
+elibsrv can be installed on a Linux or BSD server, and probably on anything that's compatible with POSIX.
 
 
 [ Dependencies ]
 
 elibsrv requires some bits to be present on your server:
- - libpq5 (used by the indexing process to populate the PostgreSQL database)
+ - libsqlite3 (used by the indexing process to populate its internal database)
  - libepub (used by the indexing process to extract metadata from EPUB files)
  - libpoppler-cpp (for PDF metadata extraction)
- - an access to a PostgreSQL database
+ - a web server with PHP 5.3 (or newer) and PHP GD and PHP SQLite3 extensions
+
+optional:
  - the 'kindlegen' binary from Kindle, if mobi conversion is required
- - a web server with PHP5 and:
-   - the PHP GD extension
-   - the PHP postgresql extension
-   - the "rewrite" module, if pretty URLs are to be used
+ - the "rewrite" http module, if pretty URLs are to be used
 
 
 [ Installation ]
 
 The installation process of the elibsrv server requires to follow a few steps.
 
-1. Prepare the SQL database: create an empty database on your PostgreSQL cluster, and populate it using the elibsrv.sql script. Example:
-# psql postgres postgres -c "CREATE USER elibsrv WITH password 'mypass';"
-# psql postgres postgres -c "CREATE DATABASE elibsrvdb WITH OWNER elibsrv;"
-# psql elibsrvdb elibsrv -f elibsrv.sql
+1. Copy the file elibsrv.conf to your /etc/ directory, and edit it to set parameters accordingly to your installation. Note, that you can store the configuration file elsewhere, and name it differently (which might come handy if you'd like to run several OPDS feeds on the same server). If you do change the location of the configuration file, you will have to adapt the crontab calls of the elibsrv backend (see below), and also modify the config.php file in your root web directory.
 
-2. Copy the file elibsrv.conf to your /etc/ directory, and edit it to set parameters accordingly to your installation. Note, that you can store the configuration file elsewhere, and name it differently (which might come handy if you'd like to run several OPDS feeds on the same server). If you do change the location of the configuration file, you will have to adapt the crontab calls of the elibsrv backend (see below), and also modify the config.php file in your root web directory.
+2. Compile the indexing backend process. To do this, simply go to the elibsrv/backend directory, and type 'make'. This should compile you an 'elibsrv' binary executable file.
 
-3. Compile the indexing backend process. To do this, simply go to the elibsrv/backend directory, and type 'make'. This should compile you an 'elibsrv' binary executable file.
-
-4. Set up indexing to be performed on a periodical basis (via a crontab entry). Assuming you keep the elibsrv backend in /root/elibsrv/elibsrv, and you keep your EPUB ebooks in /srv/ebooks, and you store your configuration file in /etc/elibsrv.conf, then the cron entry you might want to add to your crontab could look like one of these:
+3. Set up indexing to be performed on a periodical basis (via a crontab entry). Assuming you keep the elibsrv backend in /root/elibsrv/elibsrv, and you keep your EPUB ebooks in /srv/ebooks, and you store your configuration file in /etc/elibsrv.conf, then the cron entry you might want to add to your crontab could look like one of these:
 
 0 *    * * *    root    find /srv/ebooks/ -iname '*.epub' | /root/elibsrv/elibsrv /etc/elibsrv.conf
 0 *    * * *    root    find /srv/ebooks/ -regextype posix-egrep -iregex '.*\.((epub)|(pdf))' | /root/elibsrv/elibsrv /etc/elibsrv.conf
 
-5. Copy all files and directories in frontend/* to your web directory root. If you will want to use "pretty URLs" (which is highly recommended for cross-browsers compatibility), then you will also have to rename the htaccess file to .htaccess (assuming you're running the Apache web server).
+4. Copy all files and directories in frontend/* to your web directory root. If you'd like to use "pretty URLs" (which is highly recommended for cross-browsers compatibility), then you will also have to rename the htaccess file to .htaccess (assuming you're running the Apache web server).
+
+5. Run the elibsrv indexer a first time, so it builds its metadata base. Use the same command you scheduled in your crontab to run it.
 
 Since now on, you should be able to access your library via one of the following urls:
   OPDS: http://yourwebserver/

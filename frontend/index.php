@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20151220";
+$pver = "20151224";
 
 
 // include output plugins
@@ -165,18 +165,17 @@ function getLocalFilename($db, $query) {
     return(NULL);
   }
   $query = "SELECT file,format FROM books WHERE crc32={$query};";
-  $result = pg_query($query);
-  $myrow = pg_fetch_assoc($result);
+  $result = $db->query($query);
+  $myrow = $result->fetchArray();
   if ($myrow) {
     $res['filename'] = $myrow['file'];
     $res['format'] = sqlformat2human($myrow['format']);
-    pg_free_result($result);
-    return($res);
   } else {
     echo "Error: no matching file.\n";
-    pg_free_result($result);
-    return(NULL);
+    $res = NULL;
   }
+  return($res);
+  $result->finalize();
 }
 
 
@@ -279,31 +278,39 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
   printheaders($outformat, "titlesindex", "Titles");
 
   if (! empty($authorfilter)) {
-    $sqlauthorfilter = pg_escape_string($db, $authorfilter);
+    $sqlauthorfilter = $db->escapeString($authorfilter);
     $query = "SELECT {$fieldslist} FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
   } else if (! empty($langfilter)) {
     if (strlen($langfilter) > 2) {
       $sqllangfilter = ''; // non-2 letter 'language' is 'unknown'
     } else {
-      $sqllangfilter = pg_escape_string($db, $langfilter);
+      $sqllangfilter = $db->escapeString($langfilter);
     }
     $query = "SELECT {$fieldslist} FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
   } else if (! empty($tagfilter)) {
-    $sqltagfilter = pg_escape_string($db, $tagfilter);
+    $sqltagfilter = $db->escapeString($tagfilter);
     $query = "SELECT {$fieldslist} FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language;";
   } else if ($randflag != 0) {
-    $query = "SELECT {$fieldslist} FROM books ORDER BY random() LIMIT 5;";
+    // sqlite is *extremely* slow when it comes to running ORDER BY random(), so instead I have to use a quite contrapted way: get the number of rows in the table, fetch the CRCs of 5 random offsets, and finally build a temporary query with a filter on the crc set
+    $crclist = array();
+    for ($i = 0; $i < 5; $i++) {
+      $result = $db->query('SELECT crc32 FROM books LIMIT 1 OFFSET ABS(random()) % (SELECT count(*) FROM books);');
+      $row = $result->fetchArray();
+      $crclist[$i] = $row[0]; // do not be tempted to convert with inval, the max value of an INT is 2^31 on many systems, while I need all 32bits of the CRC32 values - safer to keep them simply as strings
+      $result->finalize();
+    }
+    $query = "SELECT {$fieldslist} FROM books WHERE crc32 IN (" . implode(',',$crclist) . ');';
   } else if ($latest > 0) {
-    $query = "SELECT {$fieldslist} FROM books WHERE modtime > NOW() - INTERVAL '{$latest} DAYS' ORDER BY modtime DESC, title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books WHERE modtime > strftime('%s', 'now') - {$latest}*86400 ORDER BY modtime DESC, title, author, language;";
   } else if (! empty($search)) {
-    $sqlsearch = pg_escape_string($db, $search);
+    $sqlsearch = $db->escapeString($search);
     $query = "SELECT {$fieldslist} FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";
   } else {
     $query = "SELECT {$fieldslist} FROM books ORDER BY title, author, language;";
   }
-  $result = pg_query($query);
+  $result = $db->query($query);
 
-  while ($myrow = pg_fetch_assoc($result)) {
+  while ($myrow = $result->fetchArray()) {
     $crc32 = $myrow['crc32'];
     $title = strip_tags($myrow['title']);
     $author = strip_tags($myrow['author']);
@@ -318,7 +325,7 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $format = sqlformat2human($myrow['format']);
     printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format, $kindlegenbin);
   }
-  pg_free_result($result);
+  $result->finalize();
 
   printtrailer($outformat);
 }
@@ -328,13 +335,13 @@ function authorsindex($outformat, $db) {
   printheaders($outformat, "authorsindex", "Authors");
 
   $query = "SELECT author FROM books WHERE author != '' GROUP BY author ORDER BY author;";
-  $result = pg_query($query);
+  $result = $db->query($query);
 
-  while ($myrow = pg_fetch_assoc($result)) {
+  while ($myrow = $result->fetchArray()) {
     $author = strip_tags($myrow['author']);
     printnaventry($outformat, $author, "action=titles&amp;a=" . urlencode($author), NULL);
   }
-  pg_free_result($result);
+  $result->finalize();
 
   printtrailer($outformat);
 }
@@ -344,13 +351,13 @@ function langsindex($outformat, $db) {
   printheaders($outformat, "langsindex", "Languages");
 
   $query = "SELECT (CASE WHEN language = '' THEN 'unknown' ELSE language END) AS lang FROM books GROUP BY lang ORDER BY lang;";
-  $result = pg_query($query);
+  $result = $db->query($query);
 
-  while ($myrow = pg_fetch_assoc($result)) {
+  while ($myrow = $result->fetchArray()) {
     $language = strip_tags($myrow['lang']);
     printnaventry($outformat, $language, "action=titles&amp;l=" . urlencode($language), getLangIcon($language));
   }
-  pg_free_result($result);
+  $result->finalize();
 
   printtrailer($outformat);
 }
@@ -360,13 +367,13 @@ function tagsindex($outformat, $db) {
   printheaders($outformat, "tagsindex", "Tags");
 
   $query = "SELECT tag FROM tags GROUP BY tag ORDER BY tag;";
-  $result = pg_query($query);
+  $result = $db->query($query);
 
-  while ($myrow = pg_fetch_assoc($result)) {
+  while ($myrow = $result->fetchArray()) {
     $tag = $myrow['tag'];
     printnaventry($outformat, $tag, "action=titles&amp;t=" . urlencode($tag), NULL);
   }
-  pg_free_result($result);
+  $result->finalize();
 
   printtrailer($outformat);
 }
@@ -397,11 +404,10 @@ if (!function_exists('gd_info')) {
   echo "Error: PHP GD library not installed";
   exit(1);
 }
-if (!function_exists('pg_connect')) {
-  echo "Error: PHP PostgreSQL library not installed";
+if (!extension_loaded('sqlite3')) {
+  echo "Error: PHP sqlite3 extension not enabled";
   exit(1);
 }
-
 
 // Load all params
 include 'config.php';
@@ -413,10 +419,7 @@ if (! file_exists($configfile)) {
 }
 $params = parse_ini_file($configfile);
 
-$dbpass = getconf($params, 'dbpass');
-$dbuser = getconf($params, 'dbuser');
-$dbaddr = getconf($params, 'dbaddr');
-$dbname = getconf($params, 'dbname');
+$dbfile = getconf($params, 'dbfile');
 $prettyurls = getconf($params, 'prettyurls');
 $latestdays = getconf($params, 'latestdays');
 if (empty($latestdays) || $latestdays < 1) $latestdays = 60;
@@ -453,11 +456,21 @@ if (($action == "getthumb") && (file_exists(computeThumbCacheFilename($thumbdir,
   exit(0);
 }
 
-$db = pg_connect("host={$dbaddr} dbname={$dbname} user={$dbuser} password={$dbpass} connect_timeout=5");
-if ($db == FALSE) {
-  echo "Error: failed to connect to the SQL database";
+// The main menu doesn't require any db access, so let's handle it right away
+if ($action == "") {
+  mainindex($outformat, $title);
+  exit(0);
+}
+
+// "connect" to the sql db
+try {
+  $db = new SQLite3($dbfile, SQLITE3_OPEN_READONLY);
+} catch (Exception $e) {
+  echo "Error: failed to open database - have you launched elibsrv's indexer yet?";
   exit(1);
 }
+$db->busyTimeout(20000); // avoid 'lock' errors in case the elibsrv backend is updating stuff at the same time
+
 
 if ($action == "getfile") {
   $localfile = getLocalFilename($db, $query);
@@ -537,6 +550,6 @@ if ($action == "getfile") {
 }
 
 // close the SQL connection
-pg_close($db);
+$db->close();
 
 ?>
