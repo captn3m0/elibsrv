@@ -2,7 +2,7 @@
 *** elibsrv changelog ***
 
 
-version xxx:
+version 20151224:
  - migrated the db backend from PostgreSQL to SQLite.
 
 version 20151220:
