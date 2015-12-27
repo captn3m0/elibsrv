@@ -334,7 +334,24 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
 function authorsindex($outformat, $db) {
   printheaders($outformat, "authorsindex", "Authors");
 
-  $query = "SELECT author FROM books WHERE author != '' GROUP BY author ORDER BY author;";
+  //$query = "SELECT author FROM books WHERE author != '' GROUP BY author ORDER BY author;";
+  $query = "SELECT UPPER(SUBSTR(author,1,1)) AS fletter, COUNT(DISTINCT author) AS count FROM books GROUP BY fletter ORDER BY fletter;";
+  $result = $db->query($query);
+
+  while ($myrow = $result->fetchArray()) {
+    $fletter = strip_tags($myrow['fletter']);
+    printnaventry($outformat, "{$fletter} ({$myrow['count']} entries)", "action=authorsl&amp;a=" . urlencode($fletter), NULL);
+  }
+  $result->finalize();
+
+  printtrailer($outformat);
+}
+
+
+function authorsindex_letter($outformat, $db, $query) {
+  printheaders($outformat, "authorsindex", "Authors");
+
+  $query = "SELECT author FROM books WHERE UPPER(author) LIKE '{$query}%' GROUP BY author ORDER BY author;";
   $result = $db->query($query);
 
   while ($myrow = $result->fetchArray()) {
@@ -537,6 +554,8 @@ if ($action == "getfile") {
   titlesindex($outformat, $db, NULL, NULL, NULL, 0, $latestdays, NULL, $prettyurls, $kindlegenbin);
 } else if ($action == "authors") {
   authorsindex($outformat, $db);
+} else if ($action == "authorsl") {
+  authorsindex_letter($outformat, $db, $authorfilter);
 } else if ($action == "langs") {
   langsindex($outformat, $db);
 } else if ($action == "tags") {
