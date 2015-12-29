@@ -2,6 +2,10 @@
 *** elibsrv changelog ***
 
 
+version xxx:
+ - shell argument passed to kindlegen is properly escaped,
+ - authors index presents a first-letter quick lookup table.
+
 version 20151224:
  - migrated the db backend from PostgreSQL to SQLite.
 

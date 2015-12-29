@@ -506,7 +506,7 @@ if ($action == "getfile") {
       // build the filename of the mobi file
       $localfilemobi = pathinfo($localfile['filename'], PATHINFO_DIRNAME) . '/' . pathinfo($localfile['filename'], PATHINFO_FILENAME) . '.mobi';
       // if doesn't exist yet, convert it using the kindlegen binary
-      $kindleconvertcmd = $kindlegenbin . ' \'' . $localfile['filename'] . '\'';
+      $kindleconvertcmd = $kindlegenbin . ' ' . escapeshellarg($localfile['filename']);
       if (! file_exists($localfilemobi)) {
         $execres = exec($kindleconvertcmd);
       }
