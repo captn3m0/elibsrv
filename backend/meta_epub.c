@@ -105,19 +105,13 @@ static char **get_epub_data(struct epub *epub, int type, int maxepubentries, cha
 }
 
 
-static char *get_epub_single_data(struct epub *epub, int type, char *ifempty, char **filter) {
+static char *get_epub_single_data(struct epub *epub, int type, char **filter) {
   char **res, *singleres = NULL;
   int i;
   res = get_epub_data(epub, type, 1, filter);
   /* compute the result */
   if ((res != NULL) && (res[0] != NULL)) {
     singleres = strdup(res[0]);
-  } else {
-    if (ifempty != NULL) {
-      singleres = strdup(ifempty);
-    } else {
-      singleres = strdup("");
-    }
   }
   if (res != NULL) {
     /* free all results */
@@ -147,14 +141,14 @@ struct meta *meta_epub_get(char *ebookfilename) {
   res = calloc(sizeof(struct meta), 1);
 
   /* fetch metadata */
-  res->title = get_epub_single_data(epubfile, EPUB_TITLE, NULL, NULL);
-  res->author = get_epub_single_data(epubfile, EPUB_CREATOR, NULL, NULL);
-  res->lang = get_epub_single_data(epubfile, EPUB_LANG, NULL, NULL);
-  res->desc = get_epub_single_data(epubfile, EPUB_DESCRIPTION, NULL, NULL);
+  res->title = get_epub_single_data(epubfile, EPUB_TITLE, NULL);
+  res->author = get_epub_single_data(epubfile, EPUB_CREATOR, NULL);
+  res->lang = get_epub_single_data(epubfile, EPUB_LANG, NULL);
+  res->desc = get_epub_single_data(epubfile, EPUB_DESCRIPTION, NULL);
   res->tags = get_epub_data(epubfile, EPUB_SUBJECT, 64, NULL);
-  res->publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL, NULL);
-  res->pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL, pubfilter);
-  res->moddate = get_epub_single_data(epubfile, EPUB_DATE, NULL, modfilter);
+  res->publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL);
+  res->pubdate = get_epub_single_data(epubfile, EPUB_DATE, pubfilter);
+  res->moddate = get_epub_single_data(epubfile, EPUB_DATE, modfilter);
 
   epub_close(epubfile);
   epub_cleanup();
