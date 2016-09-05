@@ -80,7 +80,7 @@ static char **get_epub_data(struct epub *epub, int type, int maxepubentries, cha
         continue;
       }
       /* if we are dealing with a CREATOR or DATE, then strip leading type and extract the 'fileAs' part */
-      if ((type == EPUB_CREATOR) || (type = EPUB_DATE)) {
+      if ((type == EPUB_CREATOR) || (type == EPUB_DATE)) {
         striptype(buff, (char *)meta[i]);
       }
       /* if result is not empty, save it (and ltrim at the same occasion) */
