@@ -68,18 +68,17 @@ static char **get_epub_data(struct epub *epub, int type, int maxepubentries, cha
 
   meta = epub_get_metadata(epub, type, &metacount);
 
-  if (meta == NULL) return(NULL);
+  if (meta == NULL) return(result);
 
   /* copy values to new buffers */
   for (i = 0; i < metacount; i++) {
     if (meta[i] != NULL) {
-      buff = strdup((char *) meta[i]);
       /* if filter set, and no match, ignore */
-      if (stringstartswith(filter, buff) == 0) {
-        free(buff);
+      if (stringstartswith(filter, (char *)meta[i]) == 0) {
         continue;
       }
-      /* if we are dealing with a CREATOR or DATE, then strip leading type and extract the 'fileAs' part */
+      buff = strdup((char *) meta[i]);
+      /* if we are dealing with a CREATOR or DATE, then strip leading type */
       if ((type == EPUB_CREATOR) || (type == EPUB_DATE)) {
         striptype(buff, (char *)meta[i]);
       }
