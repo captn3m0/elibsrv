@@ -3,11 +3,8 @@ CLIBS = -lepub -lsqlite3 -lpoppler-cpp -lstdc++
 
 all: elibsrv
 
-elibsrv: crc32.o libsql.o libgetconf.o elibsrv.o pdfmeta.o
-	gcc crc32.o libsql.o libgetconf.o elibsrv.o pdfmeta.o -o elibsrv $(CLIBS) $(CFLAGS)
-
-testdb: testdb.o libsql.o
-	gcc testdb.o libsql.o -o testdb $(CLIBS) $(CFLAGS)
+elibsrv: crc32.o libsql.o libgetconf.o elibsrv.o meta_pdf.o
+	gcc crc32.o libsql.o libgetconf.o elibsrv.o meta_pdf.o -o elibsrv $(CLIBS) $(CFLAGS)
 
 elibsrv.o: elibsrv.c
 	gcc -c elibsrv.c -o elibsrv.o $(CFLAGS)
@@ -18,11 +15,11 @@ libsql.o: libsql.c
 libgetconf.o: libgetconf.c
 	gcc -c libgetconf.c -o libgetconf.o $(CFLAGS)
 
-pdfmeta.o: pdfmeta.cpp
-	g++ -c pdfmeta.cpp -lpoppler-cpp -o pdfmeta.o -I/usr/include/poppler -I/usr/include/poppler/cpp
+meta_pdf.o: meta_pdf.cpp
+	g++ -c meta_pdf.cpp -lpoppler-cpp -o meta_pdf.o -I/usr/include/poppler -I/usr/include/poppler/cpp
 
 crc32.o: crc32.c
 	gcc -c crc32.c -o crc32.o $(CFLAGS)
 
 clean:
-	rm -f *.o elibsrv testdb
+	rm -f *.o elibsrv

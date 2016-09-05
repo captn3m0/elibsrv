@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "libsql.h"
+#include "../libsql.h"
 
 
 int main(void) {
