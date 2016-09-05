@@ -82,6 +82,7 @@ static long computecrc32(unsigned long *crc32, char *filename) {
   fclose(fd);
   crc32_finish(crc32);
   return(fsize);
+  #undef crcbuflen
 }
 
 
