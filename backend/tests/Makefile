@@ -8,3 +8,6 @@ testdb: testdb.o ../libsql.o
 
 testepub: testepub.o
 	gcc testepub.o -o testepub $(CLIBS) $(CFLAGS)
+
+clean:
+	rm -f *.o testdb testepub
