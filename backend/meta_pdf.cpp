@@ -17,7 +17,7 @@
 #include "poppler-document.h"
 #include "poppler-page.h"
 
-#include "pdfmeta.h"
+#include "meta_pdf.h"
 
 using namespace std;
 

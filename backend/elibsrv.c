@@ -28,7 +28,7 @@
 #include "crc32.h"
 #include "libsql.h"
 #include "libgetconf.h"
-#include "pdfmeta.h"
+#include "meta_pdf.h"
 
 
 enum EBOOKFORMATS {
