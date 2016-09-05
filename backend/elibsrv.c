@@ -272,12 +272,12 @@ int main(int argc, char **argv) {
       printf("------[ processing: %s ]------\n", ebookfilename);
       printf("Title: %s\n", meta->title);
       printf("Author: %s\n", meta->author);
-      printf("Tags: ");
+      printf("Tags: '");
       for (i = 0; (meta->tags != NULL) && (meta->tags[i] != NULL); i++) {
         if (i > 0) printf(", ");
         printf("%s", meta->tags[i]);
       }
-      printf("\n");
+      printf("'\n");
       printf("Lang: %s\n", meta->lang);
       printf("Desc: %s\n", meta->desc);
     }
@@ -291,9 +291,6 @@ int main(int argc, char **argv) {
     sqlpubdate = libsql_escape_string(meta->pubdate);
     sqlmoddate = libsql_escape_string(meta->moddate);
 
-    /* free original strings */
-    meta_free(meta);
-
     /* add the file to the tempbook table */
     snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO tempbooks (crc32,file,present) VALUES (%lu,%s,1);", crc32, sqlepubfilename);
     libsql_sendreq(sqlbuf, 1);
@@ -302,6 +299,7 @@ int main(int argc, char **argv) {
     snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO books (crc32,format,file,author,title,language,description,modtime,publisher,pubdate,moddate,filesize) VALUES (%lu,%d,%s,%s,%s,lower(%s),%s,strftime('%%s','now'),%s,%s,%s,%ld);", crc32, format, sqlepubfilename, sqlauthor, sqltitle, sqllang, sqldesc, sqlpublisher, sqlpubdate, sqlmoddate, fsize);
     if (libsql_sendreq(sqlbuf, 1) != 0) {
       fprintf(stderr, "SQL ERROR when trying this (please check your SQL logs): %s\n", sqlbuf);
+      meta_free(meta); /* free the meta struct */
       break;
     }
 
@@ -326,6 +324,7 @@ int main(int argc, char **argv) {
         free(sqltag);
       }
     }
+    meta_free(meta); /* free the meta struct */
   }
 
   /* remove all ebooks that are no longer present on disk (along with their tags) */
