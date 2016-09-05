@@ -218,7 +218,6 @@ int main(int argc, char **argv) {
   char *lang, *sqllang;
   char *sqlbuf;
   char **tags;
-  struct epub *epubfile;
   char ebookfilename[FILENAMELEN];
   char *sqlepubfilename;
   unsigned long crc32;
@@ -364,6 +363,7 @@ int main(int argc, char **argv) {
     if (format == FORMAT_EPUB) { /* EPUB */
       char *pubfilter[] = { "publication:", "original-publication:", "18", "19", "20", NULL };
       char *modfilter[] = { "modification:", NULL };
+      struct epub *epubfile;
       epubfile = epub_open(ebookfilename, 0 /* debug */);
       if (epubfile == NULL) {
         fprintf(stderr, "Failed to analyze file: %s\n", ebookfilename);
@@ -379,6 +379,7 @@ int main(int argc, char **argv) {
       pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL, pubfilter);
       moddate = get_epub_single_data(epubfile, EPUB_DATE, NULL, modfilter);
       epub_close(epubfile);
+      epub_cleanup();
     } else if (format == FORMAT_PDF) { /* PDF */
       struct pdfmeta *pdf;
       pdf = pdfmeta_get(ebookfilename);
@@ -477,7 +478,6 @@ int main(int argc, char **argv) {
   /* execute a VACUUM action so the db optimize itself */
   libsql_sendreq("VACUUM;", 1);
 
-  epub_cleanup();
   free(sqlbuf);
   libsql_disconnect(); /* disconnect from the sql db */
   return(0);
