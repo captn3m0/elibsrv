@@ -13,14 +13,7 @@
 extern "C" {
 #endif
 
-struct pdfmeta {
-  char *title;
-  char *author;
-  char *subject;
-};
-
-struct pdfmeta *pdfmeta_get(char *file);
-void pdfmeta_free(struct pdfmeta *m);
+struct meta *meta_pdf_get(char *file);
 
 #ifdef __cplusplus
 }

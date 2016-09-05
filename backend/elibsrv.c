@@ -19,7 +19,6 @@
  */
 
 
-#include <epub.h>   /* libepub headers */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -28,7 +27,7 @@
 #include "crc32.h"
 #include "libsql.h"
 #include "libgetconf.h"
-#include "meta_pdf.h"
+#include "meta_common.h"
 
 
 enum EBOOKFORMATS {
@@ -52,112 +51,6 @@ static int getformat(char *filename) {
   } else { /* else it's an unknown format */
     return(-1);
   }
-}
-
-
-/* strips the 'type' and 'comment' parts of an epub entry, if any. example:
- * creator: Jules Vernes (author)  ->  Jules Vernes */
-static void striptype(char *dst, char *src) {
-  char *s;
-  s = strstr((char *) src, ": ");
-  if (s != NULL) sprintf(dst, "%s", s + 2);
-  s = strstr(dst, "(");
-  if (s != NULL) *s = 0;
-}
-
-
-/* returns 0 str doesn't start with one of the strings listed in the 'start'
- * array, non-zero otherwise */
-static int stringstartswith(char **list, char *s) {
-  int i;
-  if (list == NULL) return(1);
-  for (i = 0; list[i] != NULL; i++) {
-    char *str = s;
-    for (;;) {
-      if (*list[i] == 0) return(1);
-      if (*list[i] != *str) break;
-      list[i] += 1;
-      str += 1;
-    }
-  }
-  return(0);
-}
-
-
-static char **get_epub_data(struct epub *epub, int type, int maxepubentries, char **filter) {
-  unsigned char **meta;
-  int metacount, i, rescount = 0;
-  char *buff, **result = NULL;
-  if (maxepubentries < 1) return(NULL);
-  result = calloc(maxepubentries + 1, sizeof(char *));
-  if (result == NULL) return(NULL);
-
-  meta = epub_get_metadata(epub, type, &metacount);
-
-  if (meta == NULL) return(NULL);
-
-  /* copy values to new buffers */
-  for (i = 0; i < metacount; i++) {
-    if (meta[i] != NULL) {
-      buff = strdup((char *) meta[i]);
-      /* if filter set, and no match, ignore */
-      if (stringstartswith(filter, buff) == 0) {
-        free(buff);
-        continue;
-      }
-      /* if we are dealing with a CREATOR or DATE, then strip leading type and extract the 'fileAs' part */
-      if ((type == EPUB_CREATOR) || (type = EPUB_DATE)) {
-        striptype(buff, (char *)meta[i]);
-      }
-      /* if result is not empty, save it (and ltrim at the same occasion) */
-      if (buff[0] != 0) {
-        int firstchar = 0;
-        while (buff[firstchar] == ' ' || buff[firstchar] == '\t') firstchar++;
-        result[rescount++] = strdup(buff + firstchar);
-      }
-      free(buff);
-      if (rescount >= maxepubentries) break;
-    }
-  }
-
-  /* free the meta allocated memory */
-  while (metacount > 0) {
-    metacount -= 1;
-    if (meta[metacount] != NULL) free(meta[metacount]);
-  }
-  free(meta);
-  result[rescount] = NULL;
-  return(result);
-}
-
-
-static char *get_epub_single_data(struct epub *epub, int type, char *ifempty, char **filter) {
-  char **res, *singleres = NULL;
-  int i;
-  res = get_epub_data(epub, type, 1, filter);
-  /* compute the result */
-  if ((res != NULL) && (res[0] != NULL)) {
-    singleres = strdup(res[0]);
-  } else {
-    if (ifempty != NULL) {
-      singleres = strdup(ifempty);
-    } else {
-      singleres = strdup("");
-    }
-  }
-  if (res != NULL) {
-    /* free all results */
-    for (i = 0;; i++) {
-      if (res[i] != NULL) {
-        free(res[i]);
-      } else {
-        break;
-      }
-    }
-    free(res);
-  }
-  /* return the final result */
-  return(singleres);
 }
 
 
@@ -209,15 +102,14 @@ int main(int argc, char **argv) {
   #define SQLBUFLEN 1024 * 1024
   #define FILENAMELEN 1024
   int verbosemode = 0;
-  char *title, *sqltitle;
-  char *desc, *sqldesc;
-  char *author, *sqlauthor;
-  char *publisher, *sqlpublisher;
-  char *pubdate, *sqlpubdate;
-  char *moddate, *sqlmoddate;
-  char *lang, *sqllang;
+  char *sqltitle;
+  char *sqldesc;
+  char *sqlauthor;
+  char *sqlpublisher;
+  char *sqlpubdate;
+  char *sqlmoddate;
+  char *sqllang;
   char *sqlbuf;
-  char **tags;
   char ebookfilename[FILENAMELEN];
   char *sqlepubfilename;
   unsigned long crc32;
@@ -296,6 +188,7 @@ int main(int argc, char **argv) {
     long fsize;
     int present;
     char *presentfile;
+    struct meta *meta;
 
     /* fetch the filename to process from stdin */
     if (fgets(ebookfilename, FILENAMELEN, stdin) == NULL) break;
@@ -351,83 +244,55 @@ int main(int argc, char **argv) {
     }
 
     /* fetch ebook's metadata, depending on what format it is */
-    title = NULL;
-    author = NULL;
-    lang = NULL;
-    desc = NULL;
-    tags = NULL;
-    publisher = NULL;
-    pubdate = NULL;
-    moddate = NULL;
-
     if (format == FORMAT_EPUB) { /* EPUB */
-      char *pubfilter[] = { "publication:", "original-publication:", "18", "19", "20", NULL };
-      char *modfilter[] = { "modification:", NULL };
-      struct epub *epubfile;
-      epubfile = epub_open(ebookfilename, 0 /* debug */);
-      if (epubfile == NULL) {
+      meta = meta_epub_get(ebookfilename);
+      if (meta == NULL) {
         fprintf(stderr, "Failed to analyze file: %s\n", ebookfilename);
         continue;
       }
-      /* fetch metadata */
-      title = get_epub_single_data(epubfile, EPUB_TITLE, "UNTITLED", NULL);
-      author = get_epub_single_data(epubfile, EPUB_CREATOR, "UNKNOWN", NULL);
-      lang = get_epub_single_data(epubfile, EPUB_LANG, "UND", NULL);
-      desc = get_epub_single_data(epubfile, EPUB_DESCRIPTION, NULL, NULL);
-      tags = get_epub_data(epubfile, EPUB_SUBJECT, 64, NULL);
-      publisher = get_epub_single_data(epubfile, EPUB_PUBLISHER, NULL, NULL);
-      pubdate = get_epub_single_data(epubfile, EPUB_DATE, NULL, pubfilter);
-      moddate = get_epub_single_data(epubfile, EPUB_DATE, NULL, modfilter);
-      epub_close(epubfile);
-      epub_cleanup();
     } else if (format == FORMAT_PDF) { /* PDF */
-      struct pdfmeta *pdf;
-      pdf = pdfmeta_get(ebookfilename);
-      if (pdf != NULL) {
-        if (pdf->title != NULL) title = strdup(pdf->title);
-        if (pdf->author != NULL) author = strdup(pdf->author);
-        if (pdf->subject != NULL) desc = strdup(pdf->subject);
-        pdfmeta_free(pdf);
-      }
+      meta = meta_pdf_get(ebookfilename);
+    } else {
+      fprintf(stderr, "Unknown file format: %s\n", ebookfilename);
+      continue;
     }
 
     /* validate the lang */
-    if (validlang(lang) != 0) {
-      free(lang);
-      lang = NULL;
+    if (validlang(meta->lang) != 0) {
+      free(meta->lang);
+      meta->lang = NULL;
     }
+
+    /* substitute some missing values by descriptive words */
+    if (meta->title == NULL) meta->title = strdup("UNTITLED");
+    if (meta->author == NULL) meta->author = strdup("UNKNOWN");
+    if (meta->lang == NULL) meta->lang = strdup("UND");
 
     if (verbosemode != 0) {
       printf("------[ processing: %s ]------\n", ebookfilename);
-      printf("Title: %s\n", title);
-      printf("Author: %s\n", author);
+      printf("Title: %s\n", meta->title);
+      printf("Author: %s\n", meta->author);
       printf("Tags: ");
-      for (i = 0; (tags != NULL) && (tags[i] != NULL); i++) {
+      for (i = 0; (meta->tags != NULL) && (meta->tags[i] != NULL); i++) {
         if (i > 0) printf(", ");
-        printf("%s", tags[i]);
+        printf("%s", meta->tags[i]);
       }
       printf("\n");
-      printf("Lang: %s\n", lang);
-      printf("Desc: %s\n", desc);
+      printf("Lang: %s\n", meta->lang);
+      printf("Desc: %s\n", meta->desc);
     }
 
     sqlepubfilename = libsql_escape_string(ebookfilename);
-    sqltitle = libsql_escape_string(title);
-    sqlauthor = libsql_escape_string(author);
-    sqllang = libsql_escape_string(lang);
-    sqldesc = libsql_escape_string(desc);
-    sqlpublisher = libsql_escape_string(publisher);
-    sqlpubdate = libsql_escape_string(pubdate);
-    sqlmoddate = libsql_escape_string(moddate);
+    sqltitle = libsql_escape_string(meta->title);
+    sqlauthor = libsql_escape_string(meta->author);
+    sqllang = libsql_escape_string(meta->lang);
+    sqldesc = libsql_escape_string(meta->desc);
+    sqlpublisher = libsql_escape_string(meta->publisher);
+    sqlpubdate = libsql_escape_string(meta->pubdate);
+    sqlmoddate = libsql_escape_string(meta->moddate);
 
     /* free original strings */
-    free(title);
-    free(author);
-    free(lang);
-    free(desc);
-    free(publisher);
-    free(pubdate);
-    free(moddate);
+    meta_free(meta);
 
     /* add the file to the tempbook table */
     snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO tempbooks (crc32,file,present) VALUES (%lu,%s,1);", crc32, sqlepubfilename);
@@ -448,14 +313,11 @@ int main(int argc, char **argv) {
     free(sqlpublisher);
     free(sqlpubdate);
 
-    /* insert and free tags */
-    for (i = 0; (tags != NULL) && (tags[i] != NULL); i++) {
-      char *sqltag;
-      int skip;
-      skip = 0;
-      if (strstr(tags[i], "http://") == tags[i]) skip = 1; /* skip tags that are web urls */
-      if (skip == 0) {
-        sqltag = libsql_escape_string(tags[i]);
+    /* insert tags */
+    for (i = 0; (meta->tags != NULL) && (meta->tags[i] != NULL); i++) {
+      if (strstr(meta->tags[i], "http://") != meta->tags[i]) { /* skip tags that are web urls */
+        char *sqltag;
+        sqltag = libsql_escape_string(meta->tags[i]);
         snprintf(sqlbuf, SQLBUFLEN, "INSERT INTO tags (book,tag) VALUES (%lu,lower(%s));", crc32, sqltag);
         if (libsql_sendreq(sqlbuf, 1) != 0) {
           fprintf(stderr, "SQL ERROR when trying this / please check your SQL logs: %s\n", sqlbuf);
@@ -463,9 +325,7 @@ int main(int argc, char **argv) {
         }
         free(sqltag);
       }
-      free(tags[i]);
     }
-    free(tags);
   }
 
   /* remove all ebooks that are no longer present on disk (along with their tags) */

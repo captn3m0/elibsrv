@@ -17,7 +17,7 @@
 #include "poppler-document.h"
 #include "poppler-page.h"
 
-#include "meta_pdf.h"
+#include "meta_common.h"
 
 using namespace std;
 
@@ -81,22 +81,13 @@ static char *filename2title(char *filename) {
 }
 
 
-void pdfmeta_free(struct pdfmeta *m) {
-  if (m == NULL) return;
-  free(m->title);
-  free(m->author);
-  free(m->subject);
-  free(m);
-}
-
-
-struct pdfmeta *pdfmeta_get(char *filename) {
+struct meta *meta_pdf_get(char *filename) {
   std::string str;
   poppler::document *data;
   poppler::ustring r;
   const char *meta;
   char *rawdata;
-  struct pdfmeta *res;
+  struct meta *res;
 
   data = poppler::document::load_from_file(filename);
   if (data == NULL) return(NULL);
@@ -105,7 +96,7 @@ struct pdfmeta *pdfmeta_get(char *filename) {
   str = r.to_latin1();
   meta = str.c_str();
 
-  res = (struct pdfmeta *)calloc(sizeof(struct pdfmeta), 1);
+  res = (struct meta *)calloc(sizeof(struct meta), 1);
   if (res == NULL) return(NULL);
   if (meta != NULL) {
     rawdata = strdup(meta);
@@ -116,7 +107,7 @@ struct pdfmeta *pdfmeta_get(char *filename) {
 
     res->title = extracttxt(rawdata, "<dc:title>", "</dc:title>");
     res->author = extracttxt(rawdata, "<dc:creator>", "</dc:creator>");
-    res->subject = extracttxt(rawdata, "<dc:subject>", "</dc:subject>");
+    res->desc = extracttxt(rawdata, "<dc:subject>", "</dc:subject>");
 
     free(rawdata);
   }

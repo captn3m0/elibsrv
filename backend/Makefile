@@ -3,8 +3,8 @@ CLIBS = -lepub -lsqlite3 -lpoppler-cpp -lstdc++
 
 all: elibsrv
 
-elibsrv: crc32.o libsql.o libgetconf.o elibsrv.o meta_pdf.o
-	gcc crc32.o libsql.o libgetconf.o elibsrv.o meta_pdf.o -o elibsrv $(CLIBS) $(CFLAGS)
+elibsrv: crc32.o libsql.o libgetconf.o elibsrv.o meta_common.o meta_epub.o meta_pdf.o
+	gcc crc32.o libsql.o libgetconf.o elibsrv.o meta_common.o meta_epub.o meta_pdf.o -o elibsrv $(CLIBS) $(CFLAGS)
 
 elibsrv.o: elibsrv.c
 	gcc -c elibsrv.c -o elibsrv.o $(CFLAGS)
