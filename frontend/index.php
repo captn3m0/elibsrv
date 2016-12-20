@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20160905";
+$pver = "20161220";
 
 
 // include output plugins
@@ -273,44 +273,66 @@ function mainindex($outformat, $title) {
 }
 
 
-function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls, $kindlegenbin) {
+function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls, $kindlegenbin, $pagesize, $pagenum, $action) {
   $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, moddate, file, filesize, format';
   printheaders($outformat, "titlesindex", "Titles");
 
+  $psz = $pagesize + 1;
+  if ($pagenum < 1) $pagenum = 1;
+  $offset = ($pagenum - 1) * $pagesize;
+
   if (! empty($authorfilter)) {
     $sqlauthorfilter = $db->escapeString($authorfilter);
-    $query = "SELECT {$fieldslist} FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language;";
+    $query = "SELECT {$fieldslist} FROM books WHERE author='{$sqlauthorfilter}' ORDER BY title, language LIMIT {$psz} OFFSET {$offset};";
   } else if (! empty($langfilter)) {
     if (strlen($langfilter) > 2) {
       $sqllangfilter = ''; // non-2 letter 'language' is 'unknown'
     } else {
       $sqllangfilter = $db->escapeString($langfilter);
     }
-    $query = "SELECT {$fieldslist} FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author;";
+    $query = "SELECT {$fieldslist} FROM books WHERE language='{$sqllangfilter}' ORDER BY title, author LIMIT {$psz} OFFSET {$offset};";
   } else if (! empty($tagfilter)) {
     $sqltagfilter = $db->escapeString($tagfilter);
-    $query = "SELECT {$fieldslist} FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language LIMIT {$psz} OFFSET {$offset};";
   } else if ($randflag != 0) {
     // sqlite is *extremely* slow when it comes to running ORDER BY random(), so instead I have to use a quite contrapted way: get the number of rows in the table, fetch the CRCs of 5 random offsets, and finally build a temporary query with a filter on the crc set
     $crclist = array();
     for ($i = 0; $i < 5; $i++) {
       $result = $db->query('SELECT crc32 FROM books LIMIT 1 OFFSET ABS(random()) % (SELECT count(*) FROM books);');
       $row = $result->fetchArray();
-      $crclist[$i] = $row[0]; // do not be tempted to convert with inval, the max value of an INT is 2^31 on many systems, while I need all 32bits of the CRC32 values - safer to keep them simply as strings
+      $crclist[$i] = $row[0]; // do not be tempted to convert with intval, the max value of an INT is 2^31 on many systems, while I need all 32bits of the CRC32 values - safer to keep them simply as strings
       $result->finalize();
     }
     $query = "SELECT {$fieldslist} FROM books WHERE crc32 IN (" . implode(',',$crclist) . ');';
   } else if ($latest > 0) {
-    $query = "SELECT {$fieldslist} FROM books WHERE modtime > strftime('%s', 'now') - {$latest}*86400 ORDER BY modtime DESC, title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books WHERE modtime > strftime('%s', 'now') - {$latest}*86400 ORDER BY modtime DESC, title, author, language LIMIT {$psz} OFFSET {$offset};";
   } else if (! empty($search)) {
     $sqlsearch = $db->escapeString($search);
-    $query = "SELECT {$fieldslist} FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books WHERE lower(author) LIKE lower('%{$sqlsearch}%') OR lower(title) LIKE lower('%{$sqlsearch}%') ORDER BY title, author, language LIMIT {$psz} OFFSET {$offset};";
   } else {
-    $query = "SELECT {$fieldslist} FROM books ORDER BY title, author, language;";
+    $query = "SELECT {$fieldslist} FROM books ORDER BY title, author, language LIMIT {$psz} OFFSET {$offset};";
   }
   $result = $db->query($query);
 
+  /* fetch results into an array and count items, detecting if there is a next page at the same time */
+  $resultset = array();
+  $resultcnt = 0;
+  $nextpage = -1;
+  $prevpage = -1;
   while ($myrow = $result->fetchArray()) {
+    if ($resultcnt < $pagesize) {
+      $resultset[$resultcnt++] = $myrow;
+    } else {
+      $nextpage = $pagenum + 1;
+    }
+  }
+  $result->finalize();
+  if ($pagenum > 1) $prevpage = $pagenum - 1;
+
+  if ($nextpage > 0) printnaventry($outformat, "Next page", "action=" . $action . "&amp;p={$nextpage}", "images/pgnext.png");
+  if ($prevpage > 0) printnaventry($outformat, "Previous page", "action={$action}&amp;p={$prevpage}", "images/pgprev.png");
+
+  foreach ($resultset AS $myrow) {
     $crc32 = $myrow['crc32'];
     $title = strip_tags($myrow['title']);
     $author = strip_tags($myrow['author']);
@@ -325,7 +347,6 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
     $format = sqlformat2human($myrow['format']);
     printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format, $kindlegenbin);
   }
-  $result->finalize();
 
   printtrailer($outformat);
 }
@@ -446,6 +467,8 @@ $title = getconf($params, 'title');
 if (empty($title)) $title = "Main menu";
 $thumbdir = getconf($params, 'thumbdir');
 $kindlegenbin = getconf($params, 'kindlegenbin');
+$pagesize = getconf($params, 'pagesize');
+if (empty($pagesize) || ($pagesize < 1)) $pagesize = 10;
 
 $action = "";
 $query = "";
@@ -453,6 +476,7 @@ $authorfilter = "";
 $langfilter = "";
 $tagfilter = "";
 $outformat = "";
+$pagenum = 0;
 
 if (isset($_GET['action'])) $action = $_GET['action'];
 if (isset($_GET['query'])) $query = $_GET['query'];
@@ -460,6 +484,7 @@ if (isset($_GET['a'])) $authorfilter = $_GET['a'];
 if (isset($_GET['l'])) $langfilter = $_GET['l'];
 if (isset($_GET['t'])) $tagfilter = $_GET['t'];
 if (isset($_GET['f'])) $outformat = $_GET['f'];
+if (isset($_GET['p'])) $pagenum = intval($_GET['p']);
 
 // validate that outformat is a known value
 if (! in_array($outformat, array('atom', 'dump', 'html'))) {
@@ -549,9 +574,9 @@ if ($action == "getfile") {
   header("content-type: " . image_type_to_mime_type(exif_imagetype($coverinzip)));
   readfile($coverinzip);
 } else if ($action == "titles") {
-  titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, 0, 0, $query, $prettyurls, $kindlegenbin);
+  titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, 0, 0, $query, $prettyurls, $kindlegenbin, $pagesize, $pagenum, $action);
 } else if ($action == "latest") {
-  titlesindex($outformat, $db, NULL, NULL, NULL, 0, $latestdays, NULL, $prettyurls, $kindlegenbin);
+  titlesindex($outformat, $db, NULL, NULL, NULL, 0, $latestdays, NULL, $prettyurls, $kindlegenbin, $pagesize, $pagenum, $action);
 } else if ($action == "authors") {
   authorsindex($outformat, $db);
 } else if ($action == "authorsl") {
@@ -561,7 +586,7 @@ if ($action == "getfile") {
 } else if ($action == "tags") {
   tagsindex($outformat, $db);
 } else if ($action == "rand") {
-  titlesindex($outformat, $db, NULL, NULL, NULL, 1, 0, NULL, $prettyurls, $kindlegenbin);
+  titlesindex($outformat, $db, NULL, NULL, NULL, 1, 0, NULL, $prettyurls, $kindlegenbin, $pagesize, $pagenum, $action);
 } else if ($action == "searchform") {
   searchform($outformat);
 } else {

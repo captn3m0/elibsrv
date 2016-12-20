@@ -2,6 +2,9 @@
 *** elibsrv changelog ***
 
 
+version 20161220:
+ - implemented pagination (along with the 'pagesize' configuration parameter).
+
 version 20160905:
  - shell argument passed to kindlegen is properly escaped,
  - authors index presents a first-letter quick lookup table,
