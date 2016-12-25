@@ -2,6 +2,10 @@
 *** elibsrv changelog ***
 
 
+version xxxxxxxx:
+ - amount of random books is configurable via the 'randcount' parameter,
+ - ...
+
 version 20161220:
  - implemented pagination (along with the 'pagesize' configuration parameter).
 

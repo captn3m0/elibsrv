@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20161220";
+$pver = "20161225";
 
 
 // include output plugins
@@ -273,7 +273,7 @@ function mainindex($outformat, $title) {
 }
 
 
-function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randflag, $latest, $search, $prettyurls, $kindlegenbin, $pagesize, $pagenum, $action) {
+function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $randcount, $latest, $search, $prettyurls, $kindlegenbin, $pagesize, $pagenum, $action) {
   $fieldslist = 'crc32, title, author, description, language, publisher, pubdate, modtime, moddate, file, filesize, format';
   printheaders($outformat, "titlesindex", "Titles");
 
@@ -294,10 +294,10 @@ function titlesindex($outformat, $db, $authorfilter, $langfilter, $tagfilter, $r
   } else if (! empty($tagfilter)) {
     $sqltagfilter = $db->escapeString($tagfilter);
     $query = "SELECT {$fieldslist} FROM books LEFT OUTER JOIN tags ON books.crc32=tags.book WHERE tag='{$sqltagfilter}' ORDER BY title, author, language LIMIT {$psz} OFFSET {$offset};";
-  } else if ($randflag != 0) {
+  } else if ($randcount != 0) {
     // sqlite is *extremely* slow when it comes to running ORDER BY random(), so instead I have to use a quite contrapted way: get the number of rows in the table, fetch the CRCs of 5 random offsets, and finally build a temporary query with a filter on the crc set
     $crclist = array();
-    for ($i = 0; $i < 5; $i++) {
+    for ($i = 0; $i < $randcount; $i++) {
       $result = $db->query('SELECT crc32 FROM books LIMIT 1 OFFSET ABS(random()) % (SELECT count(*) FROM books);');
       $row = $result->fetchArray();
       $crclist[$i] = $row[0]; // do not be tempted to convert with intval, the max value of an INT is 2^31 on many systems, while I need all 32bits of the CRC32 values - safer to keep them simply as strings
@@ -469,6 +469,8 @@ $thumbdir = getconf($params, 'thumbdir');
 $kindlegenbin = getconf($params, 'kindlegenbin');
 $pagesize = getconf($params, 'pagesize');
 if (empty($pagesize) || ($pagesize < 1)) $pagesize = 10;
+$randcount = getconf($params, 'randcount');
+if (empty($randcount) || ($randcount < 1)) $randcount = 5;
 
 $action = "";
 $query = "";
@@ -586,7 +588,7 @@ if ($action == "getfile") {
 } else if ($action == "tags") {
   tagsindex($outformat, $db);
 } else if ($action == "rand") {
-  titlesindex($outformat, $db, NULL, NULL, NULL, 1, 0, NULL, $prettyurls, $kindlegenbin, $pagesize, $pagenum, $action);
+  titlesindex($outformat, $db, NULL, NULL, NULL, $randcount, 0, NULL, $prettyurls, $kindlegenbin, $pagesize, $pagenum, $action);
 } else if ($action == "searchform") {
   searchform($outformat);
 } else {
