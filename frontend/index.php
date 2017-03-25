@@ -20,7 +20,7 @@
  */
 
 
-$pver = "20161225";
+$pver = "20170325";
 
 
 // include output plugins
@@ -209,6 +209,18 @@ function printnaventry($outformat, $title, $urlparams, $iconfile) {
 }
 
 
+// normalizes a filename by replacing 'weird' characters (like colon) by
+// placeholders. this is done because otherwise Kindle was unable to read
+// ebooks that had a colon (':') in their file name.
+function normalizefilename($f) {
+  $weirdchars = array(':', '\\', '%', '*', ';', '/', '<', '>', '?', '"', '|');
+  for ($i = 0; $i < strlen($f); $i++) {
+    if ((ord($f[$i]) < 32) || (in_array($f[$i], $weirdchars))) $f[$i] = '_';
+  }
+  return($f);
+}
+
+
 function printaqentry($outformat, $title, $crc32, $author, $language, $description, $publisher, $pubdate, $catdate, $moddate, $prettyurls, $filesize, $filename, $format, $kindlegenbin) {
   // prepare the array with metadata
   $meta = array();
@@ -225,8 +237,8 @@ function printaqentry($outformat, $title, $crc32, $author, $language, $descripti
   $meta['filename'] = $filename;
   $meta['format'] = $format;
   if ($prettyurls == 1) { // the epub link can have different forms, depending on the "pretty URLs" setting
-    $meta['aqlink'] = "files/{$crc32}/" . rawurlencode($author . " - " . $title) . '.' . $format;
-    $meta['aqlinkmobi'] =  "files/{$crc32}/" . rawurlencode($author . " - " . $title) . '.mobi';
+    $meta['aqlink'] = "files/{$crc32}/" . rawurlencode(normalizefilename($author . " - " . $title)) . '.' . $format;
+    $meta['aqlinkmobi'] =  "files/{$crc32}/" . rawurlencode(normalizefilename($author . " - " . $title)) . '.mobi';
   } else {
     $meta['aqlink'] = $_SERVER['PHP_SELF'] . "?action=getfile&amp;query=" . $crc32;
     $meta['aqlinkmobi'] = $_SERVER['PHP_SELF'] . "?action=getmobi&amp;query=" . $crc32;
