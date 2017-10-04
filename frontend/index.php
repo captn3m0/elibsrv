@@ -479,6 +479,7 @@ $title = getconf($params, 'title');
 if (empty($title)) $title = "Main menu";
 $thumbdir = getconf($params, 'thumbdir');
 $kindlegenbin = getconf($params, 'kindlegenbin');
+$ebookconvertbin = getconf($params, 'ebookconvertbin');
 $pagesize = getconf($params, 'pagesize');
 if (empty($pagesize) || ($pagesize < 1)) $pagesize = 10;
 $randcount = getconf($params, 'randcount');
@@ -536,7 +537,7 @@ if ($action == "getfile") {
     readfile($localfile['filename']);
   }
 } else if ($action == "getmobi") {
-  if (empty($kindlegenbin)) {
+  if (empty($kindlegenbin) and empty($ebookconvertbin)) {
     header('content-type: text/html');
     echo "<html><head></head><body>mobi conversion not available, because kindlegenbin not set.</body></html>\n";
   } else {
@@ -544,15 +545,22 @@ if ($action == "getfile") {
     if ($localfile != NULL) {
       // build the filename of the mobi file
       $localfilemobi = pathinfo($localfile['filename'], PATHINFO_DIRNAME) . '/' . pathinfo($localfile['filename'], PATHINFO_FILENAME) . '.mobi';
-      // if doesn't exist yet, convert it using the kindlegen binary
-      $kindleconvertcmd = $kindlegenbin . ' ' . escapeshellarg($localfile['filename']);
-      if (! file_exists($localfilemobi)) {
-        $execres = exec($kindleconvertcmd);
+      // if doesn't exist yet, convert it using the kindlegen/ebook-convert binary
+      if (empty($ebookconvertbin)) {
+        $cmd = $kindlegenbin . ' ' . escapeshellarg($localfile['filename']);
       }
+      else {
+        $cmd = $ebookconvertbin . ' ' . escapeshellarg($localfile['filename']) . ' ' . $localfilemobi;
+      }
+
+      if (! file_exists($localfilemobi)) {
+        $execres = exec($cmd);
+      }
+      
       // if file still doesn't exist, then something went wrong
       if (! file_exists($localfilemobi)) {
         header('content-type: text/html');
-        echo "<html><head></head><body>ERROR: mobi conversion failed. please check your kindlegenbin setting.<br>{$kindleconvertcmd}<br><br><pre>{$execres}</pre></body></html>\n";
+        echo "<html><head></head><body>ERROR: mobi conversion failed. please check your kindlegenbin/ebook-convert setting.<br>{$cmd}<br><br><pre>{$execres}</pre></body></html>\n";
       } else {
         // finally, return the mobi file
         header('content-type: application/x-mobipocket-ebook');
