@@ -44,7 +44,7 @@ COPY --from=builder /src/elibsrv /usr/bin/
 
 COPY etc/elibsrv.conf.tmpl /etc/
 COPY frontend /var/www/html
-COPY frontend/apache.conf /etc/apache2/sites-available/000-default.conf
+COPY etc/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
