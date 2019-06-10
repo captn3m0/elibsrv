@@ -43,7 +43,7 @@ COPY --from=builder /src/elibsrv /usr/bin/
 
 COPY etc/elibsrv.conf.tmpl /etc/
 COPY frontend /var/www/html
-COPY frontend/htaccess /var/www/.htaccess
+COPY frontend/htaccess /var/www/html/.htaccess
 COPY entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
