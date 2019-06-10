@@ -34,16 +34,17 @@ RUN apt-get --yes update && \
 		"/tmp/kindlegen_linux_2.6_i386_v${KINDLEGEN_VERSION}.tar.gz" && \
 	tar -xzf "/tmp/kindlegen_linux_2.6_i386_v${KINDLEGEN_VERSION}.tar.gz" -C /tmp && \
 	mv /tmp/kindlegen /usr/bin && \
+	rm "/tmp/kindlegen_linux_2.6_i386_v${KINDLEGEN_VERSION}.tar.gz" && \
 	# Cleanup
 	apt-get --yes remove curl wget && apt-get --yes clean && rm -rf /var/lib/apt/lists/* /tmp/* && \
 	a2dismod mpm_event && \
-	a2enmod php7.3
+	a2enmod php7.3 rewrite
 
 COPY --from=builder /src/elibsrv /usr/bin/
 
 COPY etc/elibsrv.conf.tmpl /etc/
 COPY frontend /var/www/html
-COPY frontend/htaccess /var/www/html/.htaccess
+COPY frontend/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
