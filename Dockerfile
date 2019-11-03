@@ -46,5 +46,6 @@ COPY etc/elibsrv.conf.tmpl /etc/
 COPY frontend /var/www/html
 COPY etc/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY entrypoint.sh /entrypoint.sh
+RUN rm /var/www/html/index.html
 
 ENTRYPOINT ["/entrypoint.sh"]
