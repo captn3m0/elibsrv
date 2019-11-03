@@ -871,5 +871,3 @@ if ($action == "getfile") {
 
 // close the SQL connection
 $db->close();
-
-?>
