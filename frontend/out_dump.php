@@ -53,26 +53,25 @@
  *     $info['homepage'] - the program's
  */
 
-
-function printheaders_dump(array $pageinfo) {
-  header("content-type: text/plain;charset=utf-8");
-  var_dump($pageinfo);
+function printheaders_dump(array $pageinfo)
+{
+    header("content-type: text/plain;charset=utf-8");
+    var_dump($pageinfo);
 }
 
-
-function printnaventry_dump(array $nav) {
-  var_dump($nav);
+function printnaventry_dump(array $nav)
+{
+    var_dump($nav);
 }
 
-
-function printaqentry_dump(array $meta) {
-  var_dump($meta);
+function printaqentry_dump(array $meta)
+{
+    var_dump($meta);
 }
 
-
-function printtrailer_dump(array $info) {
-  var_dump($info);
+function printtrailer_dump(array $info)
+{
+    var_dump($info);
 }
-
 
 ?>
