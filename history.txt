@@ -1,6 +1,9 @@
 
 *** elibsrv changelog ***
 
+version 20191104:
+- adds proper support for docker
+- documentation updates in README
 
 version 20170325:
  - amount of random books is configurable via the 'randcount' parameter,

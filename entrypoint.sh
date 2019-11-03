@@ -21,7 +21,7 @@ echo $SCAN $SERVE
 
 if [[ "$SCAN" = "1" ]]; then
     echo "[+] Scanning EPUB files"
-    find /books/ -regextype posix-egrep -iregex '.*\.((epub)|(pdf))' | elibsrv -v /etc/elibsrv.config
+    find /books/ -regextype posix-egrep -iregex '.*\.((epub)|(pdf))' | elibsrv /etc/elibsrv.conf
 fi
 
 if [[ "$SERVE" = "1" ]]; then
